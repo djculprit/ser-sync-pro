@@ -15,7 +15,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional, Tuple
 
 from sync.media_library import MediaLibrary
 
@@ -26,48 +26,19 @@ _KEEP_NEWEST = "keep-newest"
 _KEEP_OLDEST = "keep-oldest"
 
 
-def scan_and_move_duplicates(
-    music_library_root: str,
-    library: MediaLibrary,
-    detection_mode: str,
-    move_mode: str,
-) -> Dict[str, str]:
-    """
-    Scan *library* for duplicates and move copies to a timestamped dupes folder.
-
-    Returns a dict of {moved_path: kept_path} for database path-update use.
-    """
-    logger.info("Duplicate detection mode: %s", detection_mode)
-
+def group_by_key(all_tracks: List[str], detection_mode: str) -> Dict[str, List[str]]:
+    """Group *all_tracks* by detection key (singletons included; off → empty)."""
     if detection_mode == "off":
-        logger.info("Duplicate detection is disabled.")
         return {}
 
-    logger.info("Scanning for duplicates to move...")
-
-    if move_mode == _KEEP_NEWEST:
-        logger.info("Move strategy: Keep newest, move older files")
-    else:
-        logger.info("Move strategy: Keep oldest, move newer files")
-
-    # Flatten all tracks
-    all_tracks: List[str] = library.flatten_tracks()
-    logger.info("Total tracks scanned: %d", len(all_tracks))
-
-    # Group by detection key
     groups: Dict[str, List[str]] = {}
     for path in all_tracks:
         filename = os.path.basename(path).lower()
         if detection_mode == "name-only":
             key = filename
-        elif detection_mode == "name-and-size":
-            try:
-                size = os.path.getsize(path)
-            except OSError:
-                size = 0
-            key = f"{filename}|{size}"
         else:
-            logger.error("Invalid detection mode '%s', defaulting to name-and-size", detection_mode)
+            if detection_mode not in ("name-and-size",):
+                logger.error("Invalid detection mode '%s', defaulting to name-and-size", detection_mode)
             try:
                 size = os.path.getsize(path)
             except OSError:
@@ -75,20 +46,88 @@ def scan_and_move_duplicates(
             key = f"{filename}|{size}"
         groups.setdefault(key, []).append(path)
 
-    if detection_mode == "name-only":
-        logger.info("Total unique filenames: %d", len(groups))
-    else:
-        logger.info("Total unique filename+size combinations: %d", len(groups))
+    return groups
 
-    # Find duplicate groups (>1 member)
-    dupe_groups = {k: v for k, v in groups.items() if len(v) > 1}
+
+def group_duplicates(all_tracks: List[str], detection_mode: str) -> Dict[str, List[str]]:
+    """Group *all_tracks* by detection key; return only groups with >1 member (off → empty)."""
+    groups = group_by_key(all_tracks, detection_mode)
+    return {k: v for k, v in groups.items() if len(v) > 1}
+
+
+def resolve_keep_and_move(paths: List[str], move_mode: str) -> Tuple[str, List[str]]:
+    """Sort a duplicate group by move_mode; return (kept_path, [paths to move])."""
+    keep_newest = move_mode == _KEEP_NEWEST
+    paths_sorted = sorted(paths, key=lambda p: _mtime(p), reverse=keep_newest)
+    return paths_sorted[0], paths_sorted[1:]
+
+
+def preview_duplicate_groups(library: MediaLibrary, detection_mode: str) -> Dict[str, List[str]]:
+    """Read-only: group tracks in *library* by detection key without touching disk."""
+    return group_duplicates(library.flatten_tracks(), detection_mode)
+
+
+def describe_dupe_path(
+    path: str,
+    music_library_root: str,
+    crate_index: Optional[Dict[str, List[str]]] = None,
+) -> str:
+    """Format a track path as '<relative path> [crates: A, B]' (or '[not in any crate]')."""
+    rel = _relative_path(path, music_library_root)
+    crates = crate_index.get(os.path.basename(path).lower(), []) if crate_index else []
+    tag = f"crates: {', '.join(crates)}" if crates else "not in any crate"
+    return f"{rel} [{tag}]"
+
+
+def scan_and_move_duplicates(
+    music_library_root: str,
+    library: MediaLibrary,
+    detection_mode: str,
+    move_mode: str,
+    log_callback: Optional[Callable[[str], None]] = None,
+    crate_index: Optional[Dict[str, List[str]]] = None,
+) -> Dict[str, str]:
+    """
+    Scan *library* for duplicates and move copies to a timestamped dupes folder.
+
+    Returns a dict of {moved_path: kept_path} for database path-update use.
+    """
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+
+    _log(f"Duplicate detection mode: {detection_mode}")
+
+    if detection_mode == "off":
+        _log("Duplicate detection is disabled.")
+        return {}
+
+    _log("Scanning for duplicates to move...")
+
+    if move_mode == _KEEP_NEWEST:
+        _log("Move strategy: Keep newest, move older files")
+    else:
+        _log("Move strategy: Keep oldest, move newer files")
+
+    # Flatten all tracks
+    all_tracks: List[str] = library.flatten_tracks()
+    _log(f"Total tracks scanned: {len(all_tracks)}")
+
+    all_groups = group_by_key(all_tracks, detection_mode)
+    dupe_groups = {k: v for k, v in all_groups.items() if len(v) > 1}
+
+    if detection_mode == "name-only":
+        _log(f"Total unique filenames: {len(all_groups)}")
+    else:
+        _log(f"Total unique filename+size combinations: {len(all_groups)}")
 
     if not dupe_groups:
-        logger.info("No duplicates found.")
+        _log("No duplicates found.")
         return {}
 
     total_groups = len(dupe_groups)
-    logger.info("Found %d duplicate groups.", total_groups)
+    _log(f"Found {total_groups} duplicate groups.")
 
     # Create timestamped dupes folder
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -111,22 +150,20 @@ def scan_and_move_duplicates(
     total_moved = 0
 
     for group_key, paths in dupe_groups.items():
-        keep_newest = move_mode == _KEEP_NEWEST
-        paths_sorted = sorted(
-            paths,
-            key=lambda p: _mtime(p),
-            reverse=keep_newest,  # descending → newest first when keep_newest
-        )
-
-        kept_path = paths_sorted[0]
+        kept_path, move_paths = resolve_keep_and_move(paths, move_mode)
         kept_date = datetime.fromtimestamp(_mtime(kept_path)).strftime("%Y-%m-%d")
 
         log_entries.append(f"Duplicate group: {group_key}")
         log_entries.append(f"  KEPT:  {kept_path} ({kept_date})")
+        _log(
+            f"Step 0: '{os.path.basename(kept_path)}' — {len(move_paths)} duplicate(s), keeping "
+            f"{describe_dupe_path(kept_path, music_library_root, crate_index)} ({kept_date})"
+        )
 
-        for move_path in paths_sorted[1:]:
+        for move_path in move_paths:
             move_date = datetime.fromtimestamp(_mtime(move_path)).strftime("%Y-%m-%d")
             rel = _relative_path(move_path, music_library_root)
+            desc = describe_dupe_path(move_path, music_library_root, crate_index)
             dest = dupes_root / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
 
@@ -136,9 +173,10 @@ def scan_and_move_duplicates(
                 log_entries.append(f"      -> {dest}")
                 moved_to_kept[move_path] = kept_path
                 total_moved += 1
+                _log(f"    • moved {desc} ({move_date})")
             except OSError as exc:
                 log_entries.append(f"  ERROR: Failed to move {move_path}: {exc}")
-                logger.error("Failed to move file: %s — %s", move_path, exc)
+                _log(f"    • ERROR moving {desc}: {exc}")
 
         log_entries.append("")
 
@@ -146,8 +184,8 @@ def scan_and_move_duplicates(
     log_file = dupes_root / "dupes.log"
     _write_log(log_file, timestamp, total_groups, total_moved, log_entries)
 
-    logger.info("Moved %d duplicate files to: %s", total_moved, dupes_root)
-    logger.info("See %s for details.", log_file)
+    _log(f"Moved {total_moved} duplicate files to: {dupes_root}")
+    _log(f"See {log_file} for details.")
 
     return moved_to_kept
 

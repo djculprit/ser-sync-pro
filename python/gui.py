@@ -195,10 +195,12 @@ async def main(page: ft.Page) -> None:
     _save_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _run_backup_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _run_sort_ref: ft.Ref[ft.FilledButton] = ft.Ref()
+    _run0_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _run1_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _run2_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _run3_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _run4_ref: ft.Ref[ft.FilledButton] = ft.Ref()
+    _scan0_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _scan1_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _scan2_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _scan3_ref: ft.Ref[ft.FilledButton] = ft.Ref()
@@ -275,6 +277,38 @@ async def main(page: ft.Page) -> None:
             border_radius=8,
             padding=ft.Padding(left=8, top=4, right=8, bottom=4),
         )
+
+    def _scan_run_buttons(scan_ref: ft.Ref, run_ref: ft.Ref, step_n: int) -> ft.Row:
+        """Compact [🔍 Scan  ▶ Run] pair for a section header_action slot."""
+        scan_btn = ft.FilledButton(
+            "🔍  Scan",
+            ref=scan_ref,
+            height=28,
+            style=ft.ButtonStyle(
+                bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
+                color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
+                overlay_color={ft.ControlState.HOVERED: "#00000000"},
+                padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
+                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
+            ),
+            on_click=lambda _e, n=step_n: _run_scan_alone(n),
+        )
+        run_btn = ft.FilledButton(
+            "▶  Run",
+            ref=run_ref,
+            height=28,
+            style=ft.ButtonStyle(
+                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
+                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
+                overlay_color={ft.ControlState.HOVERED: "#00000000"},
+                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
+                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
+            ),
+            on_click=lambda _e, n=step_n: _run_step_alone(n),
+        )
+        return ft.Row([scan_btn, run_btn], spacing=6)
 
     def _card_flag_row(
         *checkboxes: ft.Checkbox,
@@ -464,21 +498,32 @@ async def main(page: ft.Page) -> None:
     dd_move = _dropdown(["keep-oldest", "keep-newest", "false"], "false")
     cb_session_fix = _checkbox("Fix broken session paths", value=False)
 
-    dupe_content = ft.Column(
-        [
-            cb_dupe_scan,
-            ft.Row(
-                [
-                    ft.Text("Detection:", width=80, color=_LABEL, size=12),
-                    dd_detection,
-                    ft.Text("Move:", width=40, color=_LABEL, size=12),
-                    dd_move,
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=8,
-            ),
-        ],
-        spacing=6,
+    dupe_content = ft.Container(
+        content=ft.Column(
+            [
+                cb_dupe_scan,
+                ft.Row(
+                    [
+                        ft.Text("Detection:", width=80, color=_LABEL, size=12),
+                        dd_detection,
+                        ft.Text("Move:", width=40, color=_LABEL, size=12),
+                        dd_move,
+                    ],
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                ),
+            ],
+            spacing=6,
+        ),
+        bgcolor=_CARD_BG,
+        border=ft.Border(
+            left=ft.BorderSide(1, _CARD_BORDER),
+            top=ft.BorderSide(1, _CARD_BORDER),
+            right=ft.BorderSide(1, _CARD_BORDER),
+            bottom=ft.BorderSide(1, _CARD_BORDER),
+        ),
+        border_radius=8,
+        padding=ft.Padding(left=8, top=4, right=8, bottom=4),
     )
 
     # ── Load config if available; seed defaults if not ────────────────────────
@@ -555,82 +600,122 @@ async def main(page: ft.Page) -> None:
                     ),
                     accent_color=_ACCENT_BLUE,
                 ),
-                # ── Pipeline Steps ─────────────────────────────────────────
+                # ── Pipeline / Duplicates / Session Fixer / Log — tabbed ────
                 ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Text(
-                                "Pipeline Steps",
-                                size=12,
-                                color=_LABEL,
-                                weight=ft.FontWeight.W_600,
-                            ),
-                            ft.Divider(height=1, color=_BORDER),
-                            pipeline_grid,
-                        ],
-                        spacing=8,
+                    expand=True,
+                    content=ft.Tabs(
+                        length=2,
+                        selected_index=0,
+                        content=ft.Column(
+                            [
+                                ft.TabBar(
+                                    tabs=[
+                                        ft.Tab(label="Pipeline"),
+                                        ft.Tab(label="Log"),
+                                    ],
+                                    indicator_color=_ACCENT_BLUE,
+                                    label_color=_LABEL,
+                                    unselected_label_color=_TEXT,
+                                ),
+                                ft.TabBarView(
+                                    expand=True,
+                                    controls=[
+                                        # ── Pipeline tab ──────────────────────
+                                        ft.Column(
+                                            [
+                                                ft.Container(
+                                                    content=ft.Column(
+                                                        [
+                                                            ft.Text(
+                                                                "Pipeline Steps",
+                                                                size=12,
+                                                                color=_LABEL,
+                                                                weight=ft.FontWeight.W_600,
+                                                            ),
+                                                            ft.Divider(height=1, color=_BORDER),
+                                                            pipeline_grid,
+                                                        ],
+                                                        spacing=8,
+                                                    ),
+                                                    bgcolor=_SURFACE,
+                                                    border=ft.Border(
+                                                        left=ft.BorderSide(3, _ACCENT_BLUE),
+                                                        top=ft.BorderSide(1, _BORDER),
+                                                        right=ft.BorderSide(1, _BORDER),
+                                                        bottom=ft.BorderSide(1, _BORDER),
+                                                    ),
+                                                    border_radius=8,
+                                                    padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+                                                ),
+                                                _section(
+                                                    "Dupe Manager", dupe_content,
+                                                    accent_color=_ACCENT_AMBER,
+                                                    header_action=_scan_run_buttons(_scan0_ref, _run0_ref, 0),
+                                                ),
+                                                _section(
+                                                    "History Session Fixer",
+                                                    _card_session_fixer_row(
+                                                        cb_session_fix, _sf_scan_ref, _sf_run_ref,
+                                                    ),
+                                                    accent_color=_ACCENT_AMBER,
+                                                ),
+                                            ],
+                                            spacing=16,
+                                            scroll=ft.ScrollMode.AUTO,
+                                            expand=True,
+                                        ),
+                                        # ── Log tab ───────────────────────────
+                                        ft.Container(
+                                            content=ft.Column(
+                                                [
+                                                    ft.Row(
+                                                        [
+                                                            ft.Text(
+                                                                "Log Output",
+                                                                size=12,
+                                                                color=_LABEL,
+                                                                weight=ft.FontWeight.W_600,
+                                                                expand=True,
+                                                            ),
+                                                            ft.IconButton(
+                                                                icon=ft.Icons.DELETE_SWEEP,
+                                                                icon_size=16,
+                                                                icon_color=_TEXT,
+                                                                tooltip="Clear log",
+                                                                on_click=lambda _e: _clear_log(),
+                                                            ),
+                                                        ],
+                                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                                    ),
+                                                    ft.Divider(height=1, color=_BORDER),
+                                                    ft.ListView(
+                                                        ref=_log_ref,
+                                                        expand=True,
+                                                        auto_scroll=True,
+                                                        spacing=0,
+                                                    ),
+                                                ],
+                                                spacing=4,
+                                                expand=True,
+                                            ),
+                                            bgcolor=_TERMINAL_BG,
+                                            border=ft.Border(
+                                                left=ft.BorderSide(3, _LOG_ACCENT),
+                                                top=ft.BorderSide(1, _BORDER),
+                                                right=ft.BorderSide(1, _BORDER),
+                                                bottom=ft.BorderSide(1, _BORDER),
+                                            ),
+                                            border_radius=8,
+                                            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+                                            expand=True,
+                                        ),
+                                    ],
+                                ),
+                            ],
+                            spacing=8,
+                            expand=True,
+                        ),
                     ),
-                    bgcolor=_SURFACE,
-                    border=ft.Border(
-                        left=ft.BorderSide(3, _ACCENT_BLUE),
-                        top=ft.BorderSide(1, _BORDER),
-                        right=ft.BorderSide(1, _BORDER),
-                        bottom=ft.BorderSide(1, _BORDER),
-                    ),
-                    border_radius=8,
-                    padding=ft.Padding(left=12, top=10, right=12, bottom=10),
-                ),
-                # ── Duplicate Management ─────────────────────────────────
-                _section("Duplicate Management", dupe_content, accent_color=_ACCENT_AMBER),
-                # ── History Session Fixer ────────────────────────────────
-                _section(
-                    "History Session Fixer",
-                    _card_session_fixer_row(cb_session_fix, _sf_scan_ref, _sf_run_ref),
-                    accent_color=_ACCENT_AMBER,
-                ),
-                # ── Log Output ──────────────────────────────────────────────
-                ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Row(
-                                [
-                                    ft.Text(
-                                        "Log Output",
-                                        size=12,
-                                        color=_LABEL,
-                                        weight=ft.FontWeight.W_600,
-                                        expand=True,
-                                    ),
-                                    ft.IconButton(
-                                        icon=ft.Icons.DELETE_SWEEP,
-                                        icon_size=16,
-                                        icon_color=_TEXT,
-                                        tooltip="Clear log",
-                                        on_click=lambda _e: _clear_log(),
-                                    ),
-                                ],
-                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                            ),
-                            ft.Divider(height=1, color=_BORDER),
-                            ft.ListView(
-                                ref=_log_ref,
-                                expand=True,
-                                auto_scroll=True,
-                                spacing=0,
-                                height=180,
-                            ),
-                        ],
-                        spacing=4,
-                    ),
-                    bgcolor=_TERMINAL_BG,
-                    border=ft.Border(
-                        left=ft.BorderSide(3, _LOG_ACCENT),
-                        top=ft.BorderSide(1, _BORDER),
-                        right=ft.BorderSide(1, _BORDER),
-                        bottom=ft.BorderSide(1, _BORDER),
-                    ),
-                    border_radius=8,
-                    padding=ft.Padding(left=12, top=10, right=12, bottom=10),
                 ),
                 # ── Dry Run pill ───────────────────────────────────────────
                 ft.Container(
@@ -715,7 +800,6 @@ async def main(page: ft.Page) -> None:
             ],
             spacing=16,
             expand=True,
-            scroll=ft.ScrollMode.AUTO,
         )
     )
 
@@ -789,8 +873,8 @@ async def main(page: ft.Page) -> None:
             _progress_ref.current.value = None if not enabled else 0
         for run_ref in (
             _run_backup_ref, _run_sort_ref,
-            _run1_ref, _run2_ref, _run3_ref, _run4_ref,
-            _scan1_ref, _scan2_ref, _scan3_ref, _scan4_ref,
+            _run0_ref, _run1_ref, _run2_ref, _run3_ref, _run4_ref,
+            _scan0_ref, _scan1_ref, _scan2_ref, _scan3_ref, _scan4_ref,
             _sf_scan_ref, _sf_run_ref,
         ):
             if run_ref.current:
@@ -857,6 +941,8 @@ async def main(page: ft.Page) -> None:
 
         threading.Thread(target=_worker, daemon=True).start()
 
+    _STEP_LABELS = {0: "Dupe Manager", 1: "Step 1", 2: "Step 2", 3: "Step 3", 4: "Step 4"}
+
     def _run_step_alone(step_n: int) -> None:
         """Run a single pipeline step in isolation on a daemon thread."""
         if not music_field.value or not music_field.value.strip():
@@ -876,16 +962,18 @@ async def main(page: ft.Page) -> None:
             _append_log(f"⚠️ Config error: {exc}")
             return
 
+        step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
         _log_ref.current.controls.clear()
         label = "Dry run" if cfg.dry_run else "Running"
-        _status_ref.current.value = f"{label} Step {step_n}…"
+        _status_ref.current.value = f"{label} {step_label}…"
         _cancel_event.clear()
         _set_controls_enabled(False)
 
         def _worker():
             try:
-                from sync.pipeline import run_step1, run_step2, run_step3, run_step4
+                from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
                 fn_map = {
+                    0: lambda: run_step0(cfg, log_callback=_append_log),
                     1: lambda: run_step1(cfg, log_callback=_append_log, cancel_event=_cancel_event),
                     2: lambda: run_step2(cfg, log_callback=_append_log),
                     3: lambda: run_step3(cfg, log_callback=_append_log),
@@ -893,13 +981,13 @@ async def main(page: ft.Page) -> None:
                 }
                 fn_map[step_n]()
                 def _done():
-                    _append_log(f"✅ Step {step_n} complete")
+                    _append_log(f"✅ {step_label} complete")
                     _status_ref.current.value = "Done"
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
                 def _err(_exc=exc):
-                    _append_log(f"❌ Step {step_n} failed: {_exc}")
+                    _append_log(f"❌ {step_label} failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
@@ -927,16 +1015,18 @@ async def main(page: ft.Page) -> None:
 
         # Force dry_run regardless of the checkbox state
         scan_cfg = dataclasses.replace(cfg, dry_run=True)
+        step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
 
         _log_ref.current.controls.clear()
-        _status_ref.current.value = f"Scanning Step {step_n}…"
+        _status_ref.current.value = f"Scanning {step_label}…"
         _cancel_event.clear()
         _set_controls_enabled(False)
 
         def _worker():
             try:
-                from sync.pipeline import run_step1, run_step2, run_step3, run_step4
+                from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
                 fn_map = {
+                    0: lambda: run_step0(scan_cfg, log_callback=_append_log),
                     1: lambda: run_step1(scan_cfg, log_callback=_append_log, cancel_event=_cancel_event),
                     2: lambda: run_step2(scan_cfg, log_callback=_append_log),
                     3: lambda: run_step3(scan_cfg, log_callback=_append_log),
@@ -950,7 +1040,7 @@ async def main(page: ft.Page) -> None:
                 page.run_thread(_done)
             except Exception as exc:
                 def _err(_exc=exc):
-                    _append_log(f"❌ Scan step {step_n} failed: {_exc}")
+                    _append_log(f"❌ Scan {step_label} failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)

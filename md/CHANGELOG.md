@@ -6,7 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-_(nothing pending)_
+- **Feat: Dupe Manager gets its own Scan/Run buttons (Step 0)**: Duplicate Management now runs standalone, same as Steps 1-4. `run_step0()` added to `sync/pipeline.py`, honoring `config.dry_run` for preview-vs-execute like the other step runners.
+  - When run standalone and duplicates are actually moved, `run_step0()` now also rescans the library and re-points any `.crate` files that referenced the moved-away files (previously only `database V2` got patched; crates stayed broken until a separate Step 2 run — only masked in a full `run_sync()` because Steps 1-2 always followed Step 0 there).
+  - `sync/dupe_mover.py`: extracted `group_by_key()` / `group_duplicates()` / `resolve_keep_and_move()` / `preview_duplicate_groups()` so the dry-run preview and the real mover share one grouping implementation instead of duplicating it. `scan_and_move_duplicates()` now accepts `log_callback` and `crate_index` and logs every kept/moved file individually (previously logged only via the file logger, invisible in the GUI).
+  - Added `build_crate_membership_index()` (`sync/pipeline.py`) — maps filename → crate names referencing it — and `describe_dupe_path()` (`sync/dupe_mover.py`) so every dupe log line shows the file's relative path *and* which crate(s) it belongs to.
+  - Renamed "Duplicate Management" → "Dupe Manager" in the GUI; wrapped its controls in the same elevated card style used by Pipeline Steps / Session Fixer rows for visual consistency.
+
+- **Feat: Step 4 no longer creates empty crates**: Folders with no direct tracks (only nested subfolders) were getting an empty `.crate` file created for the container folder itself. `create_new_crates()` and `_dry_run_step4()` now skip folders with zero direct tracks; summary line reports the skip count (e.g. `137 already exist, 3 empty folder(s) skipped`).
+
+- **Feat: Per-track line-by-line pipeline logging**: Steps 1-4 (both dry-run preview and live run) now log a header line followed by one indented `• track.mp3` line per affected track, instead of a single long comma-joined string. Capped at 200 lines per crate/step (`… +N more (truncated)`) to avoid flooding the log on very large folders. New `_log_track_lines()` helper in `sync/pipeline.py`.
+
+- **GUI: Log Output moved to its own tab**: Pipeline Steps, Dupe Manager, and Session Fixer now live under a "Pipeline" tab; the log panel gets a dedicated "Log" tab with the full available height instead of a fixed 180px strip. Uses Flet's `Tabs`/`TabBar`/`TabBarView` (`python/gui.py`).
+  - The tab area now expands to fill available window height (`expand=True`) instead of a fixed height — resizing the window taller grows the Pipeline/Log view instead of leaving blank space below the bottom action bar.
 
 ---
 

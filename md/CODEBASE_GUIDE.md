@@ -78,15 +78,15 @@ cdd-sync-pro/
 | Module | File | Purpose | Key Dependencies |
 |--------|------|---------|------------------|
 | **Entry Point** | `python/main.py` | GUI (default) or `--cli [--dry-run]` | `gui`, `sync.pipeline` |
-| **GUI** | `python/gui.py` | Flet dark-mode app — config, pipeline controls, log panel, session fixer | `flet`, `sync.pipeline`, `sync.session_fixer` |
+| **GUI** | `python/gui.py` | Flet dark-mode app — tabbed Pipeline/Log view, config, per-step Scan/Run, session fixer | `flet`, `sync.pipeline`, `sync.session_fixer` |
 | **Config** | `python/config.py` | `SyncConfig` dataclass — YAML load/save, step toggles, dupe modes | `pyyaml` |
-| **Pipeline** | `python/sync/pipeline.py` | `run_sync()` + 4 discrete step helpers + per-step `run_stepN()` runners | `core.*`, `sync.*` |
+| **Pipeline** | `python/sync/pipeline.py` | `run_sync()` + 5 discrete step helpers (0-4) + per-step `run_stepN()` runners | `core.*`, `sync.*` |
 | **Session Fixer** | `python/sync/session_fixer.py` | `scan_broken_paths()` / `fix_broken_paths()` — repairSerato `.session` files | `sync.media_library` |
 | **Serato Parser** | `python/core/serato_parser.py` | `Crate` + `SeratoDatabase` TLV read/write (byte-for-byte round-trip) | `core.binary_utils` |
 | **Path Utils** | `python/core/path_utils.py` | NFC/NFD normalization, volume-prefix stripping, dedup key | stdlib |
 | **Media Library** | `python/sync/media_library.py` | Recursive media scanner — parallel `ThreadPoolExecutor` | stdlib |
 | **Database Fixer** | `python/sync/database_fixer.py` | Binary database V2 TLV path patcher | `core.binary_utils` |
-| **Dupe Mover** | `python/sync/dupe_mover.py` | Duplicate scanner + mover (`keep-newest` / `keep-oldest`) | `sync.media_library` |
+| **Dupe Mover** | `python/sync/dupe_mover.py` | Duplicate scanner + mover (`keep-newest` / `keep-oldest`), crate-membership-aware logging | `sync.media_library` |
 | **Backup** | `python/sync/backup.py` | Timestamped `_Serato_` backup | stdlib |
 | **Pref Sorter** | `python/sync/pref_sorter.py` | `neworder.pref` generator — UTF-16BE, atomic write | stdlib |
 

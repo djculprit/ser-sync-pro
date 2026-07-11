@@ -19,11 +19,35 @@ from core.path_utils import normalize_for_dedup, normalize_path_for_database, re
 from core.serato_parser import Crate, SeratoDatabase, read_crate, write_crate
 from sync.backup import create_backup
 from sync.database_fixer import update_paths
-from sync.dupe_mover import scan_and_move_duplicates
+from sync.dupe_mover import (
+    describe_dupe_path,
+    group_duplicates,
+    preview_duplicate_groups,
+    resolve_keep_and_move,
+    scan_and_move_duplicates,
+)
 from sync.media_library import MediaLibrary
 from sync.pref_sorter import sort_crates
 
 logger = logging.getLogger("cdd_sync")
+
+_LIST_PREVIEW_LIMIT = 200
+
+
+def _log_track_lines(
+    _log: Callable[[str], None],
+    header: str,
+    names: List[str],
+    cap: int = _LIST_PREVIEW_LIMIT,
+) -> None:
+    """Emit *header*, then one indented line per track name (capped to avoid flooding)."""
+    _log(header)
+    shown = names[:cap]
+    for name in shown:
+        _log(f"    • {name}")
+    remaining = len(names) - len(shown)
+    if remaining > 0:
+        _log(f"    … +{remaining} more (truncated)")
 
 
 # ---------------------------------------------------------------------------
@@ -72,11 +96,16 @@ def run_sync(
     if config.step0_enabled:
         if config.dupe_move_enabled:
             if config.dry_run:
-                _log(f"[DRY RUN] Would have: scanned and moved duplicate files ({config.dupe_move_mode})")
+                _dry_run_step0_move(
+                    fs_library, config.music_library_path, serato_path,
+                    config.dupe_detection_mode, config.dupe_move_mode, _log,
+                )
             else:
                 moved_to_kept = scan_and_move_duplicates(
                     config.music_library_path, fs_library,
                     config.dupe_detection_mode, config.dupe_move_mode,
+                    crate_index=build_crate_membership_index(serato_path),
+                    log_callback=_log,
                 )
                 if moved_to_kept:
                     db_path = os.path.join(serato_path, "database V2")
@@ -210,7 +239,7 @@ def run_sync(
 
     # ── Step 0 (late): Log-only duplicate scan ───────────────────────────────
     if config.dupe_scan_enabled and not config.dupe_move_enabled and config.step0_enabled:
-        _scan_and_log_duplicates(fs_library)
+        _scan_and_log_duplicates(fs_library, config.music_library_path, serato_path, config.dupe_detection_mode, _log)
 
     _log("Sync Complete")
 
@@ -228,6 +257,130 @@ def run_sync(
 # ---------------------------------------------------------------------------
 # Individual step runners (for GUI per-step ▶ buttons)
 # ---------------------------------------------------------------------------
+
+def run_step0(config: SyncConfig, log_callback: Optional[Callable[[str], None]] = None) -> None:
+    """Run Step 0 (Duplicate Management) in isolation. Honors config.dry_run."""
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+
+    _log(f"Scanning media library {config.music_library_path}...")
+    fs_library = MediaLibrary.read_from(config.music_library_path)
+    if fs_library.total_tracks() <= 0:
+        _log("Step 0: No supported files found in media library — skipping.")
+        return
+    _log(f"Found {fs_library.total_tracks()} tracks in {fs_library.total_directories()} directories")
+
+    if not config.dupe_move_enabled and not config.dupe_scan_enabled:
+        _log("Step 0: Duplicate scan and move are both disabled — nothing to do.")
+        return
+
+    if config.dupe_move_enabled:
+        if config.dry_run:
+            _dry_run_step0_move(
+                fs_library, config.music_library_path, config.serato_library_path,
+                config.dupe_detection_mode, config.dupe_move_mode, _log,
+            )
+            return
+        crate_index = build_crate_membership_index(config.serato_library_path)
+        moved_to_kept = scan_and_move_duplicates(
+            config.music_library_path, fs_library,
+            config.dupe_detection_mode, config.dupe_move_mode,
+            log_callback=_log, crate_index=crate_index,
+        )
+        if moved_to_kept:
+            db_path = os.path.join(config.serato_library_path, "database V2")
+            db_updated = update_paths(db_path, moved_to_kept)
+            if db_updated > 0:
+                _log(f"Step 0: Updated {db_updated} paths in database V2 for moved duplicates")
+
+            # Standalone run — Steps 1-4 won't follow automatically, so re-point any
+            # crates that referenced the moved-away files ourselves (mirrors what
+            # a full sync would do via Step 2 right after Step 0).
+            _log("Step 0: Rescanning media library and fixing affected crate paths...")
+            fs_library = MediaLibrary.read_from(config.music_library_path)
+            db_file = Path(config.serato_library_path) / "database V2"
+            database = SeratoDatabase.read_from(db_file) if db_file.exists() else None
+            fix_existing_crates(config.serato_library_path, fs_library, database, _log)
+        return
+
+    # dupe_scan_enabled only — log-only report, no moves either way
+    if config.dry_run:
+        _dry_run_step0_scan(fs_library, config.music_library_path, config.serato_library_path, config.dupe_detection_mode, _log)
+    else:
+        _scan_and_log_duplicates(
+            fs_library, config.music_library_path, config.serato_library_path, config.dupe_detection_mode, _log,
+        )
+
+
+def build_crate_membership_index(serato_path: str) -> Dict[str, List[str]]:
+    """Map lowercase filename -> sorted list of crate display names that reference it."""
+    crate_files: List[Path] = []
+    collect_crate_files(Path(serato_path) / "Crates", crate_files)
+    collect_crate_files(Path(serato_path) / "Subcrates", crate_files)
+
+    index: Dict[str, set] = defaultdict(set)
+    for crate_file in crate_files:
+        try:
+            crate = read_crate(crate_file)
+        except Exception:
+            continue
+        crate_name = crate_file.stem
+        for track_path in crate.tracks:
+            index[os.path.basename(track_path).lower()].add(crate_name)
+
+    return {k: sorted(v) for k, v in index.items()}
+
+
+def _dry_run_step0_move(
+    library: MediaLibrary,
+    music_library_root: str,
+    serato_path: str,
+    detection_mode: str,
+    move_mode: str,
+    _log: Callable[[str], None],
+) -> None:
+    _log(f"[DRY RUN] Step 0: Checking for duplicates to move (detection={detection_mode}, move={move_mode})...")
+    dupe_groups = preview_duplicate_groups(library, detection_mode)
+    if not dupe_groups:
+        _log("[DRY RUN] Step 0: No duplicates found — nothing would be moved.")
+        return
+
+    crate_index = build_crate_membership_index(serato_path)
+    total_would_move = 0
+    for group_key, paths in dupe_groups.items():
+        kept_path, move_paths = resolve_keep_and_move(paths, move_mode)
+        total_would_move += len(move_paths)
+        descriptions = [describe_dupe_path(p, music_library_root, crate_index) for p in move_paths]
+        _log_track_lines(
+            _log,
+            f"[DRY RUN] Step 0: '{os.path.basename(kept_path)}' — would keep "
+            f"{describe_dupe_path(kept_path, music_library_root, crate_index)}, "
+            f"move {len(move_paths)} duplicate(s):",
+            descriptions,
+        )
+    _log(f"[DRY RUN] Step 0: Would move {total_would_move} duplicate file(s) across {len(dupe_groups)} group(s).")
+
+
+def _dry_run_step0_scan(
+    library: MediaLibrary,
+    music_library_root: str,
+    serato_path: str,
+    detection_mode: str,
+    _log: Callable[[str], None],
+) -> None:
+    _log(f"[DRY RUN] Step 0: Scanning for hard drive duplicates (detection={detection_mode})...")
+    dupe_groups = preview_duplicate_groups(library, detection_mode)
+    if not dupe_groups:
+        _log("[DRY RUN] Step 0: No hard drive duplicates found.")
+        return
+    crate_index = build_crate_membership_index(serato_path)
+    _log(f"[DRY RUN] Step 0: Found {len(dupe_groups)} duplicate file group(s) on hard drive:")
+    for group_key, paths in dupe_groups.items():
+        descriptions = [describe_dupe_path(p, music_library_root, crate_index) for p in paths]
+        _log_track_lines(_log, f"    Group '{os.path.basename(group_key)}' — {len(paths)} copies:", descriptions)
+
 
 def run_step1(
     config: SyncConfig,
@@ -427,7 +580,8 @@ def update_database_paths(
         __log("[CANCELLED] Step 1: aborted before writing fixes.")
         return
 
-    __log(f"Step 1: Fixing {len(path_fixes)} broken paths in database V2...")
+    fix_names = [os.path.basename(new) for new in path_fixes.values()]
+    _log_track_lines(__log, f"Step 1: Fixing {len(path_fixes)} broken paths in database V2:", fix_names)
     updated = update_paths(
         str(db_file),
         path_fixes,
@@ -486,6 +640,7 @@ def fix_existing_crates(
         updated: List[str] = []
         changed = False
         crate_fixes = 0
+        fixed_names: List[str] = []
 
         for track_path in original:
             filename = os.path.basename(track_path).lower()
@@ -500,6 +655,7 @@ def fix_existing_crates(
                     changed = True
                     fixed_paths += 1
                     crate_fixes += 1
+                    fixed_names.append(os.path.basename(new_rel))
                 else:
                     updated.append(track_path)
             else:
@@ -510,7 +666,11 @@ def fix_existing_crates(
             try:
                 write_crate(crate, crate_file)
                 fixed_crates += 1
-                __log(f"Step 2 [{idx}/{total_crates}]: {crate_file.stem} — {crate_fixes} path(s) fixed")
+                _log_track_lines(
+                    __log,
+                    f"Step 2 [{idx}/{total_crates}]: {crate_file.stem} — {crate_fixes} path(s) fixed:",
+                    fixed_names,
+                )
             except Exception as exc:
                 logger.error("Failed to write crate: %s — %s", crate_file.name, exc)
                 write_errors += 1
@@ -570,6 +730,9 @@ def append_new_tracks(
             logger.error("Failed to read crate for append: %s — %s", crate_filename, exc)
             continue
 
+        existing_keys = set(normalize_for_dedup(t) for t in crate.tracks)
+        actually_new = [t for t in new_tracks if normalize_for_dedup(t) not in existing_keys]
+
         before = len(crate.tracks)
         if database:
             crate.set_database(database)
@@ -583,7 +746,12 @@ def append_new_tracks(
                 write_crate(crate, crate_file)
                 appended += 1
                 new_tracks_total += added
-                __log(f"Step 3: {crate_filename.removesuffix('.crate')} — +{added} track(s) appended ({after} total)")
+                added_names = [os.path.basename(t) for t in actually_new]
+                _log_track_lines(
+                    __log,
+                    f"Step 3: {crate_filename.removesuffix('.crate')} — +{added} track(s) appended ({after} total):",
+                    added_names,
+                )
             except Exception as exc:
                 logger.error("Failed to write appended crate: %s — %s", crate_filename, exc)
         else:
@@ -620,6 +788,7 @@ def create_new_crates(
 
     created = 0
     skipped = 0
+    empty_skipped = 0
     errors = 0
 
     for crate_filename, tracks in crate_map.items():
@@ -629,8 +798,14 @@ def create_new_crates(
             logger.debug("Step 4: %s already exists — skipping", crate_filename)
             continue
 
+        if not tracks:
+            empty_skipped += 1
+            logger.debug("Step 4: %s has no direct tracks — skipping (no empty crate created)", crate_filename)
+            continue
+
         crate_display = crate_filename.removesuffix(".crate")
-        __log(f"Step 4: Creating '{crate_display}' ({len(tracks)} track(s))...")
+        track_names = [os.path.basename(t) for t in tracks]
+        _log_track_lines(__log, f"Step 4: Creating '{crate_display}' ({len(tracks)} track(s)):", track_names)
 
         crate = Crate()
         if database:
@@ -648,6 +823,8 @@ def create_new_crates(
             errors += 1
 
     summary_parts = [f"{created} crate(s) created", f"{skipped} already existed"]
+    if empty_skipped:
+        summary_parts.append(f"{empty_skipped} empty folder(s) skipped")
     if errors:
         summary_parts.append(f"{errors} error(s)")
     __log(f"Step 4 complete: {', '.join(summary_parts)}.")
@@ -671,7 +848,7 @@ def _dry_run_step1(serato_path: str, library: MediaLibrary, _log) -> None:
         return
     volume_root = get_volume_root(serato_path)
     lib_index = build_library_index(library)
-    broken = 0
+    broken_names: List[str] = []
     ambiguous = 0
     for db_track_path in database.get_all_track_paths():
         if volume_root:
@@ -686,8 +863,16 @@ def _dry_run_step1(serato_path: str, library: MediaLibrary, _log) -> None:
             continue
         fixed = normalize_path_for_database(candidates[0])
         if fixed != db_track_path:
-            broken += 1
-    _log(f"[DRY RUN] Step 1: Would fix {broken} broken paths in database V2 ({ambiguous} ambiguous skipped).")
+            broken_names.append(os.path.basename(fixed))
+    if broken_names:
+        _log_track_lines(
+            _log,
+            f"[DRY RUN] Step 1: Would fix {len(broken_names)} broken paths in database V2 "
+            f"({ambiguous} ambiguous skipped):",
+            broken_names,
+        )
+    else:
+        _log(f"[DRY RUN] Step 1: Would fix 0 broken paths in database V2 ({ambiguous} ambiguous skipped).")
 
 
 def _dry_run_step2(serato_path: str, library: MediaLibrary, database, _log) -> None:
@@ -707,7 +892,7 @@ def _dry_run_step2(serato_path: str, library: MediaLibrary, database, _log) -> N
             crate = read_crate(crate_file)
         except Exception:
             continue
-        changed = False
+        crate_fix_names: List[str] = []
         for track_path in crate.tracks:
             filename = os.path.basename(track_path).lower()
             candidates = lib_index.get(filename)
@@ -715,10 +900,15 @@ def _dry_run_step2(serato_path: str, library: MediaLibrary, database, _log) -> N
                 resolved = resolve_serato_path(candidates[0], database)
                 new_rel = normalize_path_for_database(resolved)
                 if new_rel != track_path:
-                    would_fix_paths += 1
-                    changed = True
-        if changed:
+                    crate_fix_names.append(os.path.basename(new_rel))
+        if crate_fix_names:
             would_fix_crates += 1
+            would_fix_paths += len(crate_fix_names)
+            _log_track_lines(
+                _log,
+                f"[DRY RUN] Step 2: {crate_file.stem} — {len(crate_fix_names)} path(s) would be fixed:",
+                crate_fix_names,
+            )
     _log(f"[DRY RUN] Step 2: Would fix {would_fix_paths} paths across {would_fix_crates} crates.")
 
 
@@ -744,6 +934,13 @@ def _dry_run_step3(serato_path: str, library: MediaLibrary, parent_crate_path, _
         if new:
             would_update += 1
             would_add += len(new)
+            new_names = [os.path.basename(t) for t in new]
+            _log_track_lines(
+                _log,
+                f"[DRY RUN] Step 3: {crate_filename.removesuffix('.crate')} — "
+                f"+{len(new)} track(s) would be appended:",
+                new_names,
+            )
     _log(f"[DRY RUN] Step 3: Would append {would_add} new tracks across {would_update} existing crates.")
 
 
@@ -751,16 +948,23 @@ def _dry_run_step4(serato_path: str, library: MediaLibrary, parent_crate_path, _
     _log("[DRY RUN] Step 4: Checking for new library folders that need crates...")
     subcrates_dir = Path(serato_path) / "Subcrates"
     crate_map = build_crate_file_map(library, parent_crate_path)
-    would_create: List[str] = []
+    would_create: List[tuple] = []
     already_exist = 0
+    empty_skipped = 0
     for crate_filename, tracks in crate_map.items():
         if (subcrates_dir / crate_filename).exists():
             already_exist += 1
+        elif not tracks:
+            empty_skipped += 1
         else:
-            would_create.append((crate_filename.removesuffix(".crate"), len(tracks)))
-    for name, track_count in would_create:
-        _log(f"[DRY RUN] Step 4: Would create '{name}' ({track_count} track(s))")
-    _log(f"[DRY RUN] Step 4: Would create {len(would_create)} new crates ({already_exist} already exist).")
+            would_create.append((crate_filename.removesuffix(".crate"), tracks))
+    for name, tracks in would_create:
+        track_names = [os.path.basename(t) for t in tracks]
+        _log_track_lines(_log, f"[DRY RUN] Step 4: Would create '{name}' ({len(tracks)} track(s)):", track_names)
+    summary = f"[DRY RUN] Step 4: Would create {len(would_create)} new crates ({already_exist} already exist"
+    if empty_skipped:
+        summary += f", {empty_skipped} empty folder(s) skipped"
+    _log(summary + ").")
 
 
 # ---------------------------------------------------------------------------
@@ -829,23 +1033,30 @@ def get_volume_root(serato_path: str) -> Optional[str]:
 # Late Step 0 — log-only dupe scan
 # ---------------------------------------------------------------------------
 
-def _scan_and_log_duplicates(library: MediaLibrary) -> None:
-    logger.info("Scanning for hard drive duplicates...")
-    all_tracks = library.flatten_tracks()
-    groups: Dict[str, List[str]] = defaultdict(list)
-    for path in all_tracks:
-        try:
-            size = os.path.getsize(path)
-        except OSError:
-            size = 0
-        key = os.path.basename(path).lower() + "|" + str(size)
-        groups[key].append(path)
+def _scan_and_log_duplicates(
+    library: MediaLibrary,
+    music_library_root: str,
+    serato_path: str,
+    detection_mode: str = "name-and-size",
+    _log: Optional[Callable[[str], None]] = None,
+) -> None:
+    def __log(msg: str) -> None:
+        logger.info(msg)
+        if _log:
+            _log(msg)
 
-    dupe_count = sum(1 for paths in groups.values() if len(paths) > 1)
-    if dupe_count > 0:
-        logger.info("Found %d duplicate file groups on hard drive.", dupe_count)
-    else:
-        logger.info("No hard drive duplicates found.")
+    __log("Step 0: Scanning for hard drive duplicates...")
+    dupe_groups = group_duplicates(library.flatten_tracks(), detection_mode)
+
+    if not dupe_groups:
+        __log("Step 0: No hard drive duplicates found.")
+        return
+
+    crate_index = build_crate_membership_index(serato_path)
+    __log(f"Step 0: Found {len(dupe_groups)} duplicate file group(s) on hard drive:")
+    for group_key, paths in dupe_groups.items():
+        descriptions = [describe_dupe_path(p, music_library_root, crate_index) for p in paths]
+        _log_track_lines(__log, f"    Group '{os.path.basename(group_key)}' — {len(paths)} copies:", descriptions)
 
 
 # ---------------------------------------------------------------------------
