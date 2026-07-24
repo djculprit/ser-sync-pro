@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+---
+
+## [2.1] — 2026-07-24
+
 - **Fix: malformed `osrt` block broke Steps 3/4 under Serato DJ Pro 4**: Every crate this tool ever created from scratch (no pre-existing `.crate` file to preserve headers from) wrote its `brev` (sort-direction) sub-tag as a 5-byte integer with `DEFAULT_SORTING_REV = 1 << 8` (256). A real Serato-written crate encodes `brev` as a single byte (confirmed byte-for-byte against `Subcrates/*.crate` exported by Serato itself). Legacy Serato silently tolerated the malformed tag and still read the crate's track list; Serato DJ Pro 4's stricter import validator aborts parsing the *entire* crate the instant it hits the bad tag (confirmed via Serato's own diagnostic log: `Malformed DBv2 tag 'brev' found at position 88` / `Import will continue but the remainder of the crate will be skipped`). This is why brand-new crates created by Step 4 (and tracks appended by Step 3 to a crate that had never been re-exported by Serato) appeared to do nothing under Serato 4 — not because Serato 4 stopped reading `.crate` files, but because every such file was silently rejected at import. This bug predates the Python port — the original Java implementation (`java/cdd-sync-pro/src/cdd_sync_crate.java`) has the identical `1 << 8`/5-byte encoding.
   - `python/core/serato_parser.py`: `DEFAULT_SORTING_REV` changed from `1 << 8` to `1`; `_build_osrt_payload()` now writes `brev` as a 1-byte value with a length-1 tag instead of 5 bytes. Verified against a real Serato-exported crate's `osrt` bytes, and against Serato's own log output after re-running `create_new_crates()` on a real test folder (crate imported cleanly, all tracks visible, no malformed-tag warning).
 

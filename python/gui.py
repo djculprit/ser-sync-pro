@@ -560,7 +560,7 @@ async def main(page: ft.Page) -> None:
                         ),
                         ft.Container(
                             content=ft.Text(
-                                "v2.0",
+                                "v2.1",
                                 size=10,
                                 color=_ACCENT_BLUE,
                                 weight=ft.FontWeight.W_600,
