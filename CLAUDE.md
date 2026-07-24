@@ -46,8 +46,8 @@ ant test     # Run JUnit 5 tests
 ant run      # Build and run cdd-sync-pro
 ant session-fixer-run
 ```
-CI (`.github/workflows/build.yml`) runs `ant test` on push/PR to `master` — Java only, no
-Python CI exists.
+CI (`.github/workflows/build.yml`) runs on push/PR to `main`: `java-test` (`ant test` against
+`archive/java/`) and `python-test` (`pytest` against `python/`).
 
 ## Architecture (`python/`)
 
