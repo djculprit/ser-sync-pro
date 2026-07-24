@@ -141,4 +141,4 @@ class SyncConfig:
             "dry_run": self.dry_run,
         }
         with path.open("w", encoding="utf-8") as fh:
-            yaml.safe_dump(data, fh, default_flow_style=False, allow_unicode=True)
+            yaml.safe_dump(data, fh, default_flow_style=False, allow_unicode=True, sort_keys=False)

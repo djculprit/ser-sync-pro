@@ -2,6 +2,10 @@
 # ------------------------------------
 # Copy this file to config.yaml and fill in your values.
 # Lines starting with '#' are comments and are ignored.
+#
+# Note: once the GUI runs, it owns config.yaml — every save rewrites the file
+# from scratch (field order, no comments). Hand edits to config.yaml survive
+# until the next GUI save overwrites them; this template is unaffected.
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 # (Required) Absolute path to your music library root on the filesystem.
