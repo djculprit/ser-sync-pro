@@ -12,7 +12,6 @@ logs/
 scripts/
 
 # ── Agent Actions (generated plans, not source) ──────────────
-md/actions/
 
 # ── Secrets / Local Configs ──────────────────────────────────
 # Keep *.template files — ignore the live copies

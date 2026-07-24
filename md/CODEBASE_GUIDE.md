@@ -26,11 +26,11 @@ This document provides a comprehensive overview of the **cdd-sync-pro** reposito
 - Provides smart deduplication and backup functionality
 - Supports alphabetical crate sorting
 
-The project contains **two distinct Java applications** and one **Python companion tool**:
+The project contains a **Python application** (primary, actively maintained) and **Java reference implementations** (read-only archive):
 
-1. **cdd-sync-pro** — Main sync tool (filesystem → Serato crates)
-2. **session-fixer** — Standalone tool to repair session file paths
-3. **s3-smart-sync** — S3 sync companion (Python, separate silo)
+1. **python/** — Full-featured Python reimplementation with Flet GUI + CLI (primary)
+2. **archive/java/** — Original Java source + JARs (read-only reference)
+3. **s3-smart-sync/** — S3 sync companion (Python, separate silo)
 
 ---
 
@@ -38,22 +38,34 @@ The project contains **two distinct Java applications** and one **Python compani
 
 ```text
 cdd-sync-pro/
-├── shared/src/                         # Shared Java source (used by both apps, 12 files)
-├── cdd-sync-pro/src/                   # Main sync app source (12 files)
-│   └── cdd-sync.properties.template    # Config template for main sync tool
-├── session-fixer/                      # Session-fixer silo (standalone tool)
-│   ├── src/                            # Session-fixer source files (4 files)
-│   ├── CODEBASE_GUIDE.md               # Developer docs for session-fixer
-│   ├── README.md                       # User docs for session-fixer
-│   └── session-fixer.properties.template
-├── s3-smart-sync/                      # S3 sync companion (Python)
-├── test/                               # JUnit 5 unit tests
-├── lib/                                # Test dependencies (JUnit platform JAR)
+├── python/                             # PRIMARY — Python app (GUI + CLI)
+│   ├── main.py                         # Entry point: GUI (default) or --cli --dry-run
+│   ├── gui.py                          # Flet dark-mode GUI (GitHub-dark navy theme)
+│   ├── config.py                       # SyncConfig dataclass + YAML load/save
+│   ├── config.template.yaml            # Annotated config template
+│   ├── pyproject.toml                  # Project metadata + deps
+│   ├── requirements.txt                # Runtime: flet>=0.21.0, pyyaml>=6.0
+│   ├── requirements-dev.txt            # Dev: pytest
+│   ├── core/                           # Low-level parsing + path utilities
+│   │   ├── binary_utils.py             # Big-endian I/O helpers
+│   │   ├── path_utils.py               # NFC/NFD normalization (ports cdd_sync_binary_utils)
+│   │   └── serato_parser.py            # Crate + SeratoDatabase read/write (TLV)
+│   ├── sync/                           # Pipeline modules
+│   │   ├── backup.py                   # Timestamped _Serato_ backup
+│   │   ├── database_fixer.py           # Binary database V2 TLV path patcher
+│   │   ├── dupe_mover.py               # Duplicate scanner + mover
+│   │   ├── media_library.py            # Recursive media scanner (parallel ThreadPoolExecutor)
+│   │   ├── pipeline.py                 # run_sync() orchestrator + step helpers
+│   │   ├── pref_sorter.py              # neworder.pref generator (UTF-16BE, atomic write)
+│   │   └── session_fixer.py            # Serato .session broken-path fixer (port of Java tool)
+│   └── tests/                          # pytest suite (21 tests)
+│       ├── test_path_utils.py          # 11 path normalization tests
+│       ├── test_pipeline.py            # 4 integration tests
+│       └── test_serato_parser.py       # 6 crate round-trip tests
+├── archive/java/                       # READ-ONLY — Java reference implementation
+├── s3-smart-sync/                      # S3 sync companion (Python, separate silo)
 ├── md/                                 # Internal docs (CODEBASE_GUIDE, CHANGELOG, TODO, etc.)
 │   └── actions/                        # Phased action plans + audit trails
-├── build.xml                           # Apache Ant build script (compiles all 3 Java source dirs)
-├── distr/                              # Distribution artifacts (generated)
-├── out/                                # Compiled classes (generated)
 └── README.md                           # User documentation
 ```
 
@@ -61,17 +73,26 @@ cdd-sync-pro/
 
 ## Major Modules
 
-| Module | Source Dir | Entry Point | Purpose | Key Dependencies |
-|--------|-----------|-------------|---------|------------------|
-| **Main Sync** | `cdd-sync-pro/src/` | `cdd_sync_main.java` | Syncs filesystem to Serato crates | `cdd_sync_config`, `cdd_sync_media_library`, `cdd_sync_library`, `cdd_sync_crate` |
-| **GUI Window** | `cdd-sync-pro/src/` | `cdd_sync_pro_window.java` | Dark-themed config + log window | `cdd_sync_log_window`, `cdd_sync_config` |
-| **Session Fixer** | `session-fixer/src/` | `session_fixer_main.java` | [See session-fixer/CODEBASE_GUIDE.md](../session-fixer/CODEBASE_GUIDE.md) | Uses shared modules |
-| **Crate Management** | `cdd-sync-pro/src/` | `cdd_sync_crate.java` | Read/write Serato `.crate` files | `cdd_sync_input_stream`, `cdd_sync_output_stream`, `cdd_sync_database` |
-| **Database Parser** | `shared/src/` | `cdd_sync_database.java` | Parse Serato `database V2` file | — |
-| **Media Library** | `shared/src/` | `cdd_sync_media_library.java` | Scan filesystem for audio/video files | — |
-| **Path Fixers** | `cdd-sync-pro/src/` + `shared/src/` | `cdd_sync_crate_fixer.java`, `cdd_sync_database_fixer.java` | Repair broken paths | `cdd_sync_media_library`, `cdd_sync_database` |
-| **I/O Utilities** | `shared/src/` | `cdd_sync_input_stream.java`, `cdd_sync_output_stream.java` | Binary stream helpers for Serato format | — |
-| **Logging** | `shared/src/` | `cdd_sync_log.java` | GUI/CLI logging, file output | `cdd_sync_log_window` |
+### Python (Primary)
+
+| Module | File | Purpose | Key Dependencies |
+|--------|------|---------|------------------|
+| **Entry Point** | `python/main.py` | GUI (default) or `--cli [--dry-run]` | `gui`, `sync.pipeline` |
+| **GUI** | `python/gui.py` | Flet dark-mode app — tabbed Pipeline/Log view, config, per-step Scan/Run, session fixer | `flet`, `sync.pipeline`, `sync.session_fixer` |
+| **Config** | `python/config.py` | `SyncConfig` dataclass — YAML load/save, step toggles, dupe modes | `pyyaml` |
+| **Pipeline** | `python/sync/pipeline.py` | `run_sync()` + 5 discrete step helpers (0-4) + per-step `run_stepN()` runners | `core.*`, `sync.*` |
+| **Session Fixer** | `python/sync/session_fixer.py` | `scan_broken_paths()` / `fix_broken_paths()` — repairSerato `.session` files | `sync.media_library` |
+| **Serato Parser** | `python/core/serato_parser.py` | `Crate` + `SeratoDatabase` TLV read/write (byte-for-byte round-trip) | `core.binary_utils` |
+| **Path Utils** | `python/core/path_utils.py` | NFC/NFD normalization, volume-prefix stripping, dedup key | stdlib |
+| **Media Library** | `python/sync/media_library.py` | Recursive media scanner — parallel `ThreadPoolExecutor` | stdlib |
+| **Database Fixer** | `python/sync/database_fixer.py` | Binary database V2 TLV path patcher | `core.binary_utils` |
+| **Dupe Mover** | `python/sync/dupe_mover.py` | Duplicate scanner + mover (`keep-newest` / `keep-oldest`), crate-membership-aware logging | `sync.media_library` |
+| **Backup** | `python/sync/backup.py` | Timestamped `_Serato_` backup | stdlib |
+| **Pref Sorter** | `python/sync/pref_sorter.py` | `neworder.pref` generator — UTF-16BE, atomic write | stdlib |
+
+### Java (Reference — `archive/java/` directory, read-only)
+
+See `archive/java/cdd-sync-pro/src/`, `archive/java/shared/src/`, `archive/java/session-fixer/src/` for original Java sources.
 
 ---
 

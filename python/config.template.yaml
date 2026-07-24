@@ -1,0 +1,68 @@
+# cdd-sync-pro Configuration Template
+# ------------------------------------
+# Copy this file to config.yaml and fill in your values.
+# Lines starting with '#' are comments and are ignored.
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+# (Required) Absolute path to your music library root on the filesystem.
+music_library_path: "/path/to/your/music"
+
+# (Required) Absolute path to your Serato _Serato_ folder.
+serato_library_path: "/path/to/your/_Serato_"
+
+# (Optional) Top-level parent crate name. Nested paths (e.g. A%%B) are rejected.
+# parent_crate_path: "My Music"
+
+
+# ── Options ──────────────────────────────────────────────────────────────────
+# Clear the Serato library before the sync run. Use with caution.
+clear_library_before_sync: false
+
+
+# ── Backup ───────────────────────────────────────────────────────────────────
+# Create a timestamped backup of _Serato_ before syncing.
+backup_enabled: true
+
+
+# ── Deduplication ────────────────────────────────────────────────────────────
+# Scan for duplicate tracks on the hard drive (log only, no move).
+dupe_scan_enabled: false
+
+# Move mode for duplicates. Options:
+#   "false"        — disabled (default)
+#   "keep-newest"  — keep the newest file, move older duplicates
+#   "keep-oldest"  — keep the oldest file, move newer duplicates
+dupe_move_mode: "false"
+
+# Detection key for duplicates. Options:
+#   "off"           — disabled (default)
+#   "name-and-size" — filename (case-insensitive) + file size must match
+#   "name-only"     — filename (case-insensitive) must match
+dupe_detection_mode: "off"
+
+# Sort crates alphabetically (writes neworder.pref).
+crate_sorting_enabled: false
+
+
+# ── Pipeline Steps ───────────────────────────────────────────────────────────
+# Each step can be disabled independently. All default to true.
+#
+# Step 0: Duplicate management (move + log-only scan)
+step0_enabled: true
+
+# Step 1: Fix broken paths in database V2
+step1_enabled: true
+
+# Step 2: Fix broken paths in existing crates
+step2_enabled: true
+
+# Step 3: Append new tracks to existing crates
+step3_enabled: true
+
+# Step 4: Create new crates for new library paths
+step4_enabled: true
+
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+# Dry run — log all actions but write nothing to disk.
+dry_run: false

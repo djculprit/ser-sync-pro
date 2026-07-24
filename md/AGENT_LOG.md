@@ -2,6 +2,84 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-04-04 — Doc Hygiene + Plan Closure
+
+- **Task**: Run pending `/run-phase` commits (`py-bugfix` Phase 6, `session-fixer` Phase 4), archive both plans, update all md/ docs to reflect current Python app state
+- **Files Changed**:
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Project overview updated: Python marked as primary; directory tree rewritten for `python/` layout; Major Modules table replaced with Python module table; Java section demoted to read-only reference
+  - `md/CHANGELOG.md` [MODIFIED] — `[Unreleased]` block promoted to `[2.0] — Python reimplementation (2026-04)`; clean `[Unreleased]` stub added
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+  - `md/actions/archive/py-bugfix/` [ARCHIVED] — All 6 phases done
+  - `md/actions/archive/session-fixer/` [ARCHIVED] — All 4 phases done
+- **What Was Done**: Closed two pending PENDING commit phases via `/run-phase`. Archived both completed plans. Performed a full codebase investigation (all `python/` modules, `main.py`, `config.py`, `gui.py`, `session_fixer.py`, `pipeline.py`, `path_utils.py`, test count) and updated CODEBASE_GUIDE, CHANGELOG, and AGENT_LOG to reflect the Python v2 app as the canonical implementation. Test suite: 21 tests passing.
+- **Docs to Update**: None — done here
+
+## 2026-04-03 — Flet Dark-Mode GUI Window (py-gui)
+
+- **Task**: Build a polished dark-mode Flet GUI equivalent to the Java `cdd_sync_pro_window.java`
+- **Files Changed**:
+  - `python/gui.py` [NEW] — Full Flet GUI: dark app shell, config panel (paths/steps/dupes), live log ListView, Start/Cancel wiring, dry-run checkbox, progress bar
+  - `python/main.py` [MODIFIED] — GUI/CLI split: `--cli` flag runs headless, default launches Flet GUI via `gui.launch()`
+  - `python/requirements.txt` [MODIFIED] — Added `flet>=0.21.0`
+  - `python/sync/pipeline.py` [MODIFIED] — Minor log callback compatibility fixes
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Implemented all 4 build phases of the `py-gui` plan. GUI opens at 780×760, dark theme, SF Pro font. Config panel has 3 path rows with FilePicker Browse buttons, 7 pipeline step checkboxes (with Clear Library confirmation dialog), dry-run checkbox, and duplicate management dropdowns. Log panel streams output live via `page.run_thread`. Start validates inputs, builds SyncConfig, saves config.yaml, and launches `run_sync()` on a daemon thread. Cancel appends a stop-request message. Polish pass: min window size, section borders, status label, progress bar. `main.py --cli --dry-run` still runs headlessly.
+- **Docs to Update**: None — done here
+
+## 2026-04-02 — Python Pipeline Implementation (py-pipeline)
+
+- **Task**: Port sync pipeline from Java to Python
+- **Files Changed**:
+  - `python/config.py` [NEW] — SyncConfig dataclass with YAML load/save
+  - `python/config.template.yaml` [NEW] — annotated config template
+  - `python/sync/__init__.py` [NEW] — sync package marker
+  - `python/sync/media_library.py` [NEW] — recursive media scanner with parallel ThreadPoolExecutor
+  - `python/sync/backup.py` [NEW] — timestamped _Serato_ backup utility
+  - `python/sync/dupe_mover.py` [NEW] — duplicate scanner and mover with dupes.log
+  - `python/sync/pref_sorter.py` [NEW] — neworder.pref generator in UTF-16BE
+  - `python/sync/database_fixer.py` [NEW] — binary database V2 TLV path patcher
+  - `python/sync/pipeline.py` [NEW] — run_sync() orchestrator + all crate-fixer helpers
+  - `python/main.py` [NEW] — CLI entry point with --dry-run flag
+  - `python/tests/test_pipeline.py` [NEW] — 4 integration tests (dry-run, step4, step2, sorting)
+  - `python/core/serato_parser.py` [MODIFIED] — fixed dynamic vrsn header skip for variable-length version strings
+  - `md/AGENT_LOG.md` [MODIFIED] — this entry
+- **What Was Done**: Implemented all 5 pipeline phases. All 21 tests pass (17 existing + 4 new). java/ directory completely unmodified. One bug fixed in serato_parser.py (vrsn header skip was hardcoded to 8-byte version field, failing on non-4-char versions in test binaries).
+- **Docs to Update**: None
+
+## 2026-04-02 — Python Migration Foundation (py-migrate Phase 1–3)
+
+- **Task**: Scaffold Python 3.12+ project and implement binary parsing foundation
+- **Files Changed**:
+  - `python/pyproject.toml` [NEW] — project metadata, flet + pyyaml deps
+  - `python/requirements.txt` [NEW] — runtime dependencies
+  - `python/requirements-dev.txt` [NEW] — dev dependencies (pytest)
+  - `python/.gitignore` [NEW] — Python-specific ignores
+  - `python/core/__init__.py` [NEW] — package marker
+  - `python/core/path_utils.py` [NEW] — NFC/NFD path normalization (ports cdd_sync_binary_utils)
+  - `python/core/binary_utils.py` [NEW] — low-level binary I/O helpers
+  - `python/core/serato_parser.py` [NEW] — Crate + SeratoDatabase read/write (ports cdd_sync_crate, cdd_sync_database)
+  - `python/tests/__init__.py` [NEW] — test package marker
+  - `python/tests/test_path_utils.py` [NEW] — 8 path normalization tests
+  - `python/tests/test_serato_parser.py` [NEW] — 6 crate round-trip tests
+  - `md/AGENT_LOG.md` [MODIFIED] — this entry
+- **What Was Done**: Implemented Phases 1–3 of the Python migration. Binary parser is a direct port of the Java TLV reader/writer with byte-for-byte round-trip fidelity. All 14 tests pass. Java source in `java/` untouched.
+- **Docs to Update**: None — done here
+
+## 2026-04-02 — Python Migration Architecture + Action Plan (py-migrate)
+
+- **Task**: Senior architect assessment of Java→Python migration; produce 4-phase action plan for a builder agent
+- **Files Changed**:
+  - `md/actions/py-migrate/PLAN.md` [NEW] — 4-phase plan: scaffold, binary parser, tests, commit
+  - `md/actions/py-migrate/PHASE_1.md` [NEW] — Project scaffold (pyproject.toml, requirements)
+  - `md/actions/py-migrate/PHASE_2.md` [NEW] — Core binary parsing foundation (path_utils, binary_utils, serato_parser)
+  - `md/actions/py-migrate/PHASE_3.md` [NEW] — pytest suite: 14 tests (path normalization + crate round-trip)
+  - `md/actions/py-migrate/PHASE_4.md` [NEW] — AGENT_LOG update + commit
+  - `md/actions/py-migrate/ORCHESTRATE.md` [NEW] — Dispatch guide for orchestrator
+  - `md/actions/py-migrate/AUDIT.md` [NEW] — Pre-filled audit state machine (4 rows, all PENDING)
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Produced full architectural assessment (6 evaluation dimensions, weighted pros/cons matrix, strategic recommendations). Locked all decisions: Flet GUI, PyYAML config, custom struct binary parser (no serato-tools), session-fixer deferred, Python 3.12+. Produced 6 action-plan artefacts per skill protocol. Plan gates Phase 2 on NFC/NFD parity test; Phase 3 on byte-for-byte binary round-trip identity; pipeline + GUI phases deferred to future plans.
+- **Docs to Update**: None — done here. Execute plan via `md/actions/py-migrate/ORCHESTRATE.md`.
+
 ## 2026-03-31 — Hygiene Audit + Action Plan (hygiene-fixes)
 
 - **Task**: Audit core components for hygiene findings; produce a 5-phase action plan for another agent to execute
@@ -329,3 +407,8 @@
 - **New Concepts**: None (existing domain terms documented in `CONCEPTS.md`)
 - **Docs to Update**: None — these are the initial docs
 2026-03-30 | Refactor Step 2 crate path fixer | cdd_sync_crate_fixer.java, cdd_sync_main.java, cdd_sync_crate.java | Replaced multi-threaded ambiguous-lookup Step 2 with a simple sequential loop; all crates now processed from DB as source of truth; added skip logging in main | CHANGELOG.md
+2026-04-02 | Python Migration Pre-Flight | .gitignore, python/, java/, md/actions/python-convert.md | Scaffolded the Python migration plan and relocated legacy Java code to a read-only java/ directory | CHANGELOG.md, AGENT_LOG.md
+2026-04-03 | Python GUI dark-mode polish | python/gui.py | Upgraded Flet GUI palette to GitHub-dark navy, branded header with v2.0 badge and Live pill, 3px accent borders per section, Dry Run amber pill row, terminal-dark log panel with colorized lines and Clear button, always-visible progress bar, button radius 8 | CHANGELOG.md
+2026-04-03 | Step 4 verbose crate logging | python/sync/pipeline.py | Dry-run now lists each crate that would be created; live run logs Creating/Created/Failed per-crate. | CHANGELOG.md
+2026-04-03 | Archive completed action plans | md/actions/archive/ | Moved all 4 completed action-plan-lite features (gui-steps, py-gui, py-migrate, py-pipeline) to md/actions/archive/. Removed stale md/prompt.md and md/actions/python-convert.md. | None
+2026-04-03 | Session Fixer Port + GUI Stability | python/sync/session_fixer.py, python/gui.py | Ported Java session-fixer to Python with MediaLibrary index strategy; fixed Flet thread-safety crash (queue-based log flusher), page.open API, and _err closure NameError. | CHANGELOG.md, AGENT_LOG.md
