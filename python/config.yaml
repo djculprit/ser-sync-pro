@@ -1,0 +1,15 @@
+backup_enabled: true
+clear_library_before_sync: false
+crate_sorting_enabled: true
+dry_run: false
+dupe_detection_mode: name-and-size
+dupe_move_mode: 'false'
+dupe_scan_enabled: false
+music_library_path: /Volumes/Current/Crates
+parent_crate_path: Current
+serato_library_path: /Volumes/Current/_Serato_
+step0_enabled: true
+step1_enabled: true
+step2_enabled: true
+step3_enabled: true
+step4_enabled: true
