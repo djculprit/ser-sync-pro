@@ -11,7 +11,7 @@ files, deduplicates tracks, and backs up the `_Serato_` folder before writing.
 The repo contains two implementations of the same tool:
 
 - **`python/`** — PRIMARY, actively maintained. Flet-based GUI + headless CLI, Python 3.12+.
-- **`java/`** — read-only reference implementation (original). Do not modify unless
+- **`archive/java/`** — read-only reference implementation (original). Do not modify unless
   explicitly asked; treat it as historical/reference only.
 - **`s3-smart-sync/`** — separate, unrelated companion tool (S3 sync), its own Python silo.
 
@@ -37,10 +37,10 @@ pytest tests/test_path_utils.py::test_name  # Single test
 
 Double-clicking `python.command` (repo root) sets up the venv if needed and launches the GUI.
 
-### Java reference (`java/`)
+### Java reference (`archive/java/`)
 
 ```bash
-cd java
+cd archive/java
 ant all      # Clean + build cdd-sync-pro and session-fixer
 ant test     # Run JUnit 5 tests
 ant run      # Build and run cdd-sync-pro

@@ -29,7 +29,7 @@ This document provides a comprehensive overview of the **cdd-sync-pro** reposito
 The project contains a **Python application** (primary, actively maintained) and **Java reference implementations** (read-only archive):
 
 1. **python/** — Full-featured Python reimplementation with Flet GUI + CLI (primary)
-2. **java/** — Original Java source + JARs (read-only reference)
+2. **archive/java/** — Original Java source + JARs (read-only reference)
 3. **s3-smart-sync/** — S3 sync companion (Python, separate silo)
 
 ---
@@ -62,7 +62,7 @@ cdd-sync-pro/
 │       ├── test_path_utils.py          # 11 path normalization tests
 │       ├── test_pipeline.py            # 4 integration tests
 │       └── test_serato_parser.py       # 6 crate round-trip tests
-├── java/                               # READ-ONLY — Java reference implementation
+├── archive/java/                       # READ-ONLY — Java reference implementation
 ├── s3-smart-sync/                      # S3 sync companion (Python, separate silo)
 ├── md/                                 # Internal docs (CODEBASE_GUIDE, CHANGELOG, TODO, etc.)
 │   └── actions/                        # Phased action plans + audit trails
@@ -90,9 +90,9 @@ cdd-sync-pro/
 | **Backup** | `python/sync/backup.py` | Timestamped `_Serato_` backup | stdlib |
 | **Pref Sorter** | `python/sync/pref_sorter.py` | `neworder.pref` generator — UTF-16BE, atomic write | stdlib |
 
-### Java (Reference — `java/` directory, read-only)
+### Java (Reference — `archive/java/` directory, read-only)
 
-See `java/cdd-sync-pro/src/`, `java/shared/src/`, `java/session-fixer/src/` for original Java sources.
+See `archive/java/cdd-sync-pro/src/`, `archive/java/shared/src/`, `archive/java/session-fixer/src/` for original Java sources.
 
 ---
 
