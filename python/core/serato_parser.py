@@ -28,7 +28,7 @@ from .path_utils import normalize_for_dedup, normalize_path_for_database, resolv
 
 DEFAULT_VERSION = "81.0"
 DEFAULT_SORTING = "song"
-DEFAULT_SORTING_REV = 1 << 8
+DEFAULT_SORTING_REV = 1
 DEFAULT_COLUMNS = ["song", "artist", "album", "length"]
 
 # Crate vrsn header suffix (UTF-16BE after the 4-char version string)
@@ -220,8 +220,8 @@ def _build_osrt_payload(crate: Crate) -> bytes:
     inner.write(sorting_bytes)
     inner.write(b'brev')
     rev = crate.get_sorting_rev()
-    rev_bytes = rev.to_bytes(5, 'big')
-    inner.write(struct.pack('>I', 5))
+    rev_bytes = rev.to_bytes(1, 'big')
+    inner.write(struct.pack('>I', 1))
     inner.write(rev_bytes)
     return inner.getvalue()
 
