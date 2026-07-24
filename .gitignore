@@ -19,6 +19,7 @@ cdd-sync-pro/cdd-sync.properties
 session-fixer/session-fixer.properties
 s3-smart-sync/.env
 s3-smart-sync/config.json
+python/config.yaml
 
 # ── Python ───────────────────────────────────────────────────
 __pycache__/
