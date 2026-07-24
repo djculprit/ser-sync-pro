@@ -2,6 +2,24 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-07-24 — Archive Java, Ship v2.1.0, Rename Default Branch
+
+- **Task**: Archive the deprecated Java implementation, merge the `python` branch into the main line, cut an official v2.1.0 release, close gaps found during a smoke test, and rename the default branch from `master` to `main`.
+- **Files Changed**:
+  - `java/` → `archive/java/` [MOVED] — path references updated in `CLAUDE.md`, `md/CODEBASE_GUIDE.md`, `.github/workflows/build.yml`
+  - `README.md` [REWRITTEN] — replaced Java-era Quick Start/Build/Structure sections with the current Python app's setup, usage, and config reference
+  - `python` branch [MERGED] — PR #1, 28 commits, fast-forward, merged into the main line after CI passed
+  - `python/config.yaml` [UNTRACKED] — added to `.gitignore`; contains user-specific library paths, `config.template.yaml` is the source-controlled template
+  - `python/config.py` [FIXED] — `save()` now writes YAML with `sort_keys=False` so `config.yaml` matches the template's field order instead of alphabetical
+  - `md/CHANGELOG.md` [MODIFIED] — `[Unreleased]` promoted to `[2.1] — 2026-07-24`; new `[Unreleased]` stub added, then populated with this session's infra changes
+  - `python/pyproject.toml`, `python/gui.py` [MODIFIED] — version bumped to `2.1.0`; GUI badge later changed to read the version from `pyproject.toml` at runtime (`_app_version()`) instead of a hardcoded string, after the badge was caught stale during the bump
+  - `.github/workflows/build.yml` [MODIFIED] — added a `python-test` job (`pytest` against `python/`) alongside the existing `java-test`; both jobs' trigger branch updated `master` → `main`
+  - `README.md`, `CLAUDE.md` [FIXED] — stale `python.command` launcher references corrected to `run.command` (caught during smoke test)
+  - Default branch renamed `master` → `main` on GitHub; old `origin/master` deleted after confirming CI passed on `main`
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — CI section updated to describe both jobs and the `main` trigger
+- **What Was Done**: Moved the Java reference implementation to `archive/java/` and updated every internal path reference. Merged the 28-commit `python` branch into the main line via a reviewed PR (all CI checks green). Fixed a divergent-branch issue caused by a local-only commit made before the merge landed (rebased cleanly, no conflicts). Untracked the personal `config.yaml` and diagnosed why it looked "out of sync" with the template — it wasn't; the GUI's `SyncConfig.save()` just rewrites it alphabetically and comment-free on every save, which was then fixed to preserve field order. Cut and published the v2.1.0 release (annotated tag + GitHub Release). Ran a full smoke test (pytest, `--cli --dry-run` against a real 34,591-track library, confirmed zero disk writes) which caught the `python.command` doc typo. Added the missing Python CI job, since only Java had test coverage despite Python being the primary implementation. Collapsed the GUI version badge and `pyproject.toml` to a single source of truth after the badge was caught out of sync post-bump. Renamed the default branch to `main` (no branch protection was in place; CI re-verified green on `main` before deleting old `master`).
+- **Docs to Update**: None — done here
+
 ## 2026-04-04 — Doc Hygiene + Plan Closure
 
 - **Task**: Run pending `/run-phase` commits (`py-bugfix` Phase 6, `session-fixer` Phase 4), archive both plans, update all md/ docs to reflect current Python app state

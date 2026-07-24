@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **CI: added a `python-test` job**: `.github/workflows/build.yml` now runs `pytest` against `python/` on every push/PR, alongside the existing `java-test` (`ant test` against `archive/java/`). Previously only Java had CI coverage despite `python/` being the primary implementation.
+- **GUI version badge now single-sourced from `pyproject.toml`**: `python/gui.py` previously hardcoded a `"v2.0"` string that had already drifted from the packaged version once. `_app_version()` now reads `python/pyproject.toml` at runtime via `tomllib`, so the badge can't go stale again.
+- **Repo: default branch renamed `master` → `main`**: Old `master` ref deleted from GitHub after the rename; CI triggers and docs updated to match.
+- **Docs: fixed stale `python.command` references**: `README.md` and `CLAUDE.md` referenced a `python.command` launcher that doesn't exist — the actual file is `run.command`.
+
 ---
 
 ## [2.1] — 2026-07-24

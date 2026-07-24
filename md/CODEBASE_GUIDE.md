@@ -416,12 +416,14 @@ ant run      # Build and run cdd-sync-pro
 
 ### CI / GitHub Actions
 
-`.github/workflows/build.yml` runs `ant test` on every push and pull request targeting `master`.
+`.github/workflows/build.yml` runs two independent jobs on every push and pull request
+targeting `main`:
 
-- **Runner**: `ubuntu-latest`
-- **Java**: Temurin 11 (via `actions/setup-java@v4`)
-- **Ant**: Installed via `apt-get`
-- **Trigger**: `push` and `pull_request` on `master`
+- **`java-test`** — `ant test` against `archive/java/` (Runner: `ubuntu-latest`, Java:
+  Temurin 11 via `actions/setup-java@v4`, Ant installed via `apt-get`)
+- **`python-test`** — `pytest` against `python/` (Runner: `ubuntu-latest`, Python 3.12 via
+  `actions/setup-python@v5`, deps via `pip install -r requirements-dev.txt`)
+- **Trigger**: `push` and `pull_request` on `main`
 
 ### Test Suite
 
