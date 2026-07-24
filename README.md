@@ -40,7 +40,7 @@ python3 -m venv .venv
 python main.py                  # Launch GUI (default)
 ```
 
-Or double-click `python.command` in the repo root — it sets up the venv if needed and launches the GUI.
+Or double-click `run.command` in the repo root — it sets up the venv if needed and launches the GUI.
 
 ### Headless CLI
 

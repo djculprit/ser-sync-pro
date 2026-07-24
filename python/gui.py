@@ -10,6 +10,7 @@ import queue
 import sys
 import threading
 import time
+import tomllib
 from pathlib import Path
 
 import flet as ft
@@ -18,6 +19,18 @@ import flet as ft
 _HERE = Path(__file__).parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
+
+
+def _app_version() -> str:
+    """Read the app version from pyproject.toml — the single source of truth."""
+    try:
+        with (_HERE / "pyproject.toml").open("rb") as fh:
+            return tomllib.load(fh)["project"]["version"]
+    except (OSError, KeyError, tomllib.TOMLDecodeError):
+        return "unknown"
+
+
+_APP_VERSION = _app_version()
 
 
 # ── Colour tokens ────────────────────────────────────────────────────────────
@@ -560,7 +573,7 @@ async def main(page: ft.Page) -> None:
                         ),
                         ft.Container(
                             content=ft.Text(
-                                "v2.1",
+                                f"v{_APP_VERSION}",
                                 size=10,
                                 color=_ACCENT_BLUE,
                                 weight=ft.FontWeight.W_600,

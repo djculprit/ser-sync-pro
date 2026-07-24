@@ -35,7 +35,7 @@ pytest tests/test_path_utils.py -v          # Single file
 pytest tests/test_path_utils.py::test_name  # Single test
 ```
 
-Double-clicking `python.command` (repo root) sets up the venv if needed and launches the GUI.
+Double-clicking `run.command` (repo root) sets up the venv if needed and launches the GUI.
 
 ### Java reference (`archive/java/`)
 
