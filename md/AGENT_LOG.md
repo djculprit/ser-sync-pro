@@ -2,6 +2,18 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-07-25 — Per-Session File Logging (Volume-Relative)
+
+- **Task**: The Python app had no persistent logging — `main.py --cli` only configured a console handler, and the GUI never touched `logging` at all, so pipeline `logger.info()` calls went nowhere under the GUI. Add per-session log files, matching the location convention of the original Java tool.
+- **Files Changed**:
+  - `python/core/session_log.py` [NEW] — `session_log_file(name, serato_path)` context manager: attaches a `FileHandler` to the shared `cdd_sync` logger for one run, writing to `<parent of _Serato_>/cdd-sync-pro/logs/<name>-<timestamp>.log`.
+  - `python/sync/pipeline.py` [MODIFIED] — `run_sync()` is now a thin wrapper opening a `"sync"` session log around the renamed `_run_sync()`.
+  - `python/sync/session_fixer.py` [MODIFIED] — `scan_broken_paths()` / `fix_broken_paths()` wrap `_scan_broken_paths_impl()` / `_fix_broken_paths_impl()` the same way (`"session-scan"` / `"session-fix"`); new `_make_log()` helper threads session-fixer output through `logging.getLogger("cdd_sync")` as well as the existing `log_callback`/GUI path.
+  - `run_cli.command` [NEW, untracked — `*.command` is gitignored] — CLI launcher mirroring `run.command`; venv setup, config.yaml check, pauses before closing.
+  - `README.md`, `CLAUDE.md`, `md/CHANGELOG.md`, `md/CODEBASE_GUIDE.md`, `md/TODO.md`, `md/CONCEPTS.md` [MODIFIED] — documented the new logging location and module.
+- **What Was Done**: Investigated the log location in the archived Java implementation (`cdd_sync_main.java:109`: `seratoDir.getParentFile()` + `"cdd-sync-pro/logs"`) after an initial CWD-relative `python/logs/` implementation was flagged as wrong — Serato libraries live on external volumes, so logs need to travel with the drive. Rebuilt `session_log.py` to derive the log directory from `serato_path` instead of CWD. Verified via a temp-directory smoke test that logs land at `<serato's volume>/cdd-sync-pro/logs/`. Chose one consolidated log per run (not the Java version's seven per-step files) — simpler, still fully timestamped/attributable. `pytest` — 21/21 passing (tests use `tempfile`-based `_Serato_` dirs, so log output during tests lands in the OS temp dir, not the repo).
+- **Docs to Update**: None — done here
+
 ## 2026-07-24 — Archive Java, Ship v2.1.0, Rename Default Branch
 
 - **Task**: Archive the deprecated Java implementation, merge the `python` branch into the main line, cut an official v2.1.0 release, close gaps found during a smoke test, and rename the default branch from `master` to `main`.

@@ -17,6 +17,7 @@ from typing import Callable, Dict, List, Optional
 from config import SyncConfig
 from core.path_utils import normalize_for_dedup, normalize_path_for_database, resolve_serato_path
 from core.serato_parser import Crate, SeratoDatabase, read_crate, write_crate
+from core.session_log import session_log_file
 from sync.backup import create_backup
 from sync.database_fixer import update_paths
 from sync.dupe_mover import (
@@ -61,9 +62,18 @@ def run_sync(
 ) -> None:
     """
     Execute the full sync pipeline in the same sequence as Java's runSync().
-    All write operations are guarded by config.dry_run.
+    All write operations are guarded by config.dry_run. Wraps _run_sync in a
+    session log file so every run — GUI or CLI — leaves a record on disk.
     """
+    with session_log_file("sync", config.serato_library_path):
+        _run_sync(config, log_callback, cancel_event)
 
+
+def _run_sync(
+    config: SyncConfig,
+    log_callback: Optional[Callable[[str], None]] = None,
+    cancel_event: Optional[threading.Event] = None,
+) -> None:
     def _log(msg: str) -> None:
         logger.info(msg)
         if log_callback:

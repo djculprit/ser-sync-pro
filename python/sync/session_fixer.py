@@ -8,6 +8,7 @@ Public API:
 
 from __future__ import annotations
 
+import logging
 import os
 import struct
 import unicodedata
@@ -15,7 +16,23 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable, Optional
 
+from core.session_log import session_log_file
 from sync.media_library import MediaLibrary
+
+logger = logging.getLogger("cdd_sync")
+
+
+def _make_log(log_callback: Optional[Callable[[str], None]]) -> Callable[[str], None]:
+    """Combine the caller's callback (GUI display) with the shared logger,
+    so session-fixer output lands in the session log file the same way the
+    sync pipeline's does."""
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+        else:
+            print(msg)
+    return _log
 
 
 # ---------------------------------------------------------------------------
@@ -327,6 +344,18 @@ def scan_broken_paths(
     dry_run: bool = True,
     log_callback: Optional[Callable[[str], None]] = None,
 ) -> dict:
+    """Scan all .session files for broken paths. Wraps _scan_broken_paths_impl
+    in a session log file so a standalone scan (GUI preview) leaves a record."""
+    with session_log_file("session-scan", serato_path):
+        return _scan_broken_paths_impl(serato_path, music_library_paths, dry_run, log_callback)
+
+
+def _scan_broken_paths_impl(
+    serato_path: str,
+    music_library_paths: list[str],
+    dry_run: bool = True,
+    log_callback: Optional[Callable[[str], None]] = None,
+) -> dict:
     """Scan all .session files for broken paths.
 
     Uses the same MediaLibrary parallel-scandir strategy as pipeline Step 2
@@ -340,7 +369,7 @@ def scan_broken_paths(
             "unfixable": [path, ...]
         }
     """
-    log = log_callback or print
+    log = _make_log(log_callback)
 
     log("Checking for broken filepaths in session files...")
     if dry_run:
@@ -480,13 +509,25 @@ def fix_broken_paths(
     log_callback: Optional[Callable[[str], None]] = None,
 ) -> tuple[int, int]:
     """Scan and (unless dry_run) rewrite .session files with corrected paths.
+    Wraps the whole scan+fix in a single session log file — the internal scan
+    uses _scan_broken_paths_impl directly so it doesn't open a second one.
 
     Returns:
         (sessions_fixed, entries_fixed)
     """
-    log = log_callback or print
+    with session_log_file("session-fix", serato_path):
+        return _fix_broken_paths_impl(serato_path, music_library_paths, dry_run, log_callback)
 
-    result = scan_broken_paths(serato_path, music_library_paths, dry_run=dry_run, log_callback=log)
+
+def _fix_broken_paths_impl(
+    serato_path: str,
+    music_library_paths: list[str],
+    dry_run: bool = False,
+    log_callback: Optional[Callable[[str], None]] = None,
+) -> tuple[int, int]:
+    log = _make_log(log_callback)
+
+    result = _scan_broken_paths_impl(serato_path, music_library_paths, dry_run=dry_run, log_callback=log_callback)
     fixable: dict[str, str] = result["fixable"]
 
     if not fixable or dry_run:

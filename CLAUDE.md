@@ -62,6 +62,9 @@ Entry point `main.py` launches the Flet GUI by default, or runs headless via `--
     detection and dedup silently fail. See "Path format requirements" below.
   - `serato_parser.py` — `Crate` and `SeratoDatabase` TLV (tag-length-value) read/write,
     byte-for-byte round-trip.
+  - `session_log.py` — `session_log_file(name, serato_path)` context manager: attaches a
+    `FileHandler` to the shared `cdd_sync` logger for one run, writing a timestamped log to
+    `<parent of _Serato_>/cdd-sync-pro/logs/`. See "Session logs" below.
 - **`sync/`** — the pipeline, orchestrated by `pipeline.py:run_sync()`:
   1. `backup.py` — timestamped backup of `_Serato_`.
   2. `media_library.py` — parallel (ThreadPoolExecutor) recursive scan of the music folder.
@@ -97,6 +100,17 @@ written to fix — orphaned/duplicate Serato database entries. Prefer the existi
 Both crate writing (Python) and its Java ancestor read the existing file on disk first and
 skip the write if content is unchanged (after normalizing paths for comparison) — this
 avoids redundant disk I/O and log noise. Preserve this behavior when modifying write paths.
+
+### Session logs
+
+Every write-capable entry point (`run_sync()`, `session_fixer.scan_broken_paths()`,
+`session_fixer.fix_broken_paths()`) opens a timestamped log file via
+`core/session_log.py:session_log_file()`. Logs land at
+`<parent of _Serato_>/cdd-sync-pro/logs/`, matching the original Java tool
+(`cdd_sync_main.java`'s `setLogDirectory()`) — this is deliberate: Serato libraries typically
+live on external volumes, so logs travel with the drive instead of collecting under wherever
+the app happens to be launched from. Never hardcode a CWD-relative `logs/` path; derive it
+from `config.serato_library_path` (or the `serato_path` argument) via `session_log_file`.
 
 ## Reference docs
 

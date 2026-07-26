@@ -26,7 +26,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **GUI Config Window**: Dark-themed Flet interface with per-step scan/run, config editing, and live log output
 - **Headless CLI**: Run the full pipeline from `config.yaml`, no GUI required
 - **Dry-Run Mode**: Preview a full sync without writing anything to disk (`--dry-run`)
-- **Timestamped Logs**: All logs saved under the app's `logs/` directory
+- **Volume-Relative Session Logs**: Every sync/session-fixer run writes a timestamped log to `<parent of _Serato_>/cdd-sync-pro/logs/`, alongside the backup — logs travel with the drive, not the app
 
 ## Quick Start
 

@@ -49,7 +49,8 @@ cdd-sync-pro/
 │   ├── core/                           # Low-level parsing + path utilities
 │   │   ├── binary_utils.py             # Big-endian I/O helpers
 │   │   ├── path_utils.py               # NFC/NFD normalization (ports cdd_sync_binary_utils)
-│   │   └── serato_parser.py            # Crate + SeratoDatabase read/write (TLV)
+│   │   ├── serato_parser.py            # Crate + SeratoDatabase read/write (TLV)
+│   │   └── session_log.py              # Per-run file logging, volume-relative (ports cdd_sync_log's setLogDirectory)
 │   ├── sync/                           # Pipeline modules
 │   │   ├── backup.py                   # Timestamped _Serato_ backup
 │   │   ├── database_fixer.py           # Binary database V2 TLV path patcher
@@ -84,6 +85,7 @@ cdd-sync-pro/
 | **Session Fixer** | `python/sync/session_fixer.py` | `scan_broken_paths()` / `fix_broken_paths()` — repairSerato `.session` files | `sync.media_library` |
 | **Serato Parser** | `python/core/serato_parser.py` | `Crate` + `SeratoDatabase` TLV read/write (byte-for-byte round-trip) | `core.binary_utils` |
 | **Path Utils** | `python/core/path_utils.py` | NFC/NFD normalization, volume-prefix stripping, dedup key | stdlib |
+| **Session Log** | `python/core/session_log.py` | `session_log_file(name, serato_path)` — per-run log file at `<parent of _Serato_>/cdd-sync-pro/logs/` | stdlib `logging` |
 | **Media Library** | `python/sync/media_library.py` | Recursive media scanner — parallel `ThreadPoolExecutor` | stdlib |
 | **Database Fixer** | `python/sync/database_fixer.py` | Binary database V2 TLV path patcher | `core.binary_utils` |
 | **Dupe Mover** | `python/sync/dupe_mover.py` | Duplicate scanner + mover (`keep-newest` / `keep-oldest`), crate-membership-aware logging | `sync.media_library` |
@@ -326,6 +328,8 @@ See `archive/java/cdd-sync-pro/src/`, `archive/java/shared/src/`, `archive/java/
 - `progress(task, current, total)` — throttled percentage + ETA display, updates in-place on CLI
 - `cdd_sync_log_window` is the shared base class (protected fields for subclassing)
 - `cdd_sync_log_window_handler` — `java.util.logging` handler bridging to the GUI log window; installed via `install()`
+
+> **Python equivalent**: `python/core/session_log.py`'s `session_log_file(name, serato_path)` ports the volume-relative log location (`<parent of _Serato_>/cdd-sync-pro/logs/`) but consolidates to one log file per run instead of seven per-step files — see `python/sync/pipeline.py` (`run_sync`) and `python/sync/session_fixer.py` (`scan_broken_paths` / `fix_broken_paths`) for the wrapped entry points.
 
 #### `cdd_sync_exception.java` / `cdd_sync_fatal_exception.java`
 
