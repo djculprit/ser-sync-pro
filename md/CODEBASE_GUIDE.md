@@ -40,7 +40,9 @@ The project contains a **Python application** (primary, actively maintained) and
 cdd-sync-pro/
 ├── python/                             # PRIMARY — Python app (GUI + CLI)
 │   ├── main.py                         # Entry point: GUI (default) or --cli --dry-run
-│   ├── gui.py                          # Flet dark-mode GUI (GitHub-dark navy theme)
+│   ├── gui/                            # Flet dark-mode GUI (GitHub-dark navy theme)
+│   │   ├── __init__.py                 # App shell: main(), handlers, config bundling
+│   │   └── theme.py                    # Colour tokens + pure/stateless widget builders
 │   ├── config.py                       # SyncConfig dataclass + YAML load/save
 │   ├── config.template.yaml            # Annotated config template
 │   ├── pyproject.toml                  # Project metadata + deps
@@ -79,7 +81,7 @@ cdd-sync-pro/
 | Module | File | Purpose | Key Dependencies |
 |--------|------|---------|------------------|
 | **Entry Point** | `python/main.py` | GUI (default) or `--cli [--dry-run]` | `gui`, `sync.pipeline` |
-| **GUI** | `python/gui.py` | Flet dark-mode app — tabbed Pipeline/Log view, config, per-step Scan/Run, session fixer | `flet`, `sync.pipeline`, `sync.session_fixer` |
+| **GUI** | `python/gui/__init__.py` (+ `theme.py`) | Flet dark-mode app — tabbed Pipeline/Log view, config, per-step Scan/Run, session fixer | `flet`, `sync.pipeline`, `sync.session_fixer` |
 | **Config** | `python/config.py` | `SyncConfig` dataclass — YAML load/save, step toggles, dupe modes | `pyyaml` |
 | **Pipeline** | `python/sync/pipeline.py` | `run_sync()` + 5 discrete step helpers (0-4) + per-step `run_stepN()` runners | `core.*`, `sync.*` |
 | **Session Fixer** | `python/sync/session_fixer.py` | `scan_broken_paths()` / `fix_broken_paths()` — repairSerato `.session` files | `sync.media_library` |

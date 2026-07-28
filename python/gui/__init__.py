@@ -15,8 +15,34 @@ from pathlib import Path
 
 import flet as ft
 
+from .theme import (
+    _ACCENT_AMBER,
+    _ACCENT_BLUE,
+    _ACCENT_GREEN,
+    _ACCENT_RED,
+    _BG,
+    _BORDER,
+    _CARD_BG,
+    _CARD_BORDER,
+    _LABEL,
+    _LOG_ACCENT,
+    _SURFACE,
+    _TERMINAL_BG,
+    _TEXT,
+    _card_action_row,
+    _card_session_fixer_row,
+    _card_step_row,
+    _checkbox,
+    _dropdown,
+    _field,
+    _path_row,
+    _scan_run_buttons,
+    _section,
+)
+from .config_io import _ConfigControls, _build_config, _load_config
+
 # Ensure python/ is on path so config / sync imports work
-_HERE = Path(__file__).parent
+_HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
@@ -31,150 +57,6 @@ def _app_version() -> str:
 
 
 _APP_VERSION = _app_version()
-
-
-# ── Colour tokens ────────────────────────────────────────────────────────────
-_BG          = "#0f1117"  # deep navy-black
-_SURFACE     = "#161b22"  # card surface
-_BORDER      = "#21262d"  # cool border
-_TEXT        = "#8b949e"  # muted body
-_LABEL       = "#c9d1d9"  # prominent labels
-_ACCENT_GREEN  = "#3fb950"  # success / checked
-_ACCENT_AMBER  = "#d29922"  # warning / dry-run
-_ACCENT_RED    = "#f85149"  # error / cancel
-_ACCENT_BLUE   = "#58a6ff"  # primary / focus
-_TERMINAL_BG   = "#0a0c10"  # log panel bg
-_LOG_ACCENT    = "#6e40c9"  # log panel left border
-
-
-def _section(
-    title: str,
-    content: ft.Control,
-    accent_color: str | None = None,
-    header_action: ft.Control | None = None,
-) -> ft.Container:
-    """Titled dark section container with optional left-accent border."""
-    left_w = 3 if accent_color else 1
-    left_c = accent_color or _BORDER
-    if header_action is not None:
-        title_row: ft.Control = ft.Row(
-            [
-                ft.Text(title, size=12, color=_LABEL, weight=ft.FontWeight.W_600, expand=True),
-                header_action,
-            ],
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
-    else:
-        title_row = ft.Text(title, size=12, color=_LABEL, weight=ft.FontWeight.W_600)
-    return ft.Container(
-        content=ft.Column(
-            [title_row, ft.Divider(height=1, color=_BORDER), content],
-            spacing=8,
-        ),
-        bgcolor=_SURFACE,
-        border=ft.Border(
-            left=ft.BorderSide(left_w, left_c),
-            top=ft.BorderSide(1, _BORDER),
-            right=ft.BorderSide(1, _BORDER),
-            bottom=ft.BorderSide(1, _BORDER),
-        ),
-        border_radius=8,
-        padding=ft.Padding(left=12, top=10, right=12, bottom=10),
-    )
-
-
-def _path_row(
-    label: str,
-    field: ft.TextField,
-    on_browse=None,
-) -> ft.Row:
-    """Label + text field + optional Browse button row."""
-    controls: list[ft.Control] = [
-        ft.Text(label, width=120, color=_LABEL, size=12),
-        field,
-    ]
-    if on_browse is not None:
-        controls.append(
-            ft.FilledButton(
-                "Browse",
-                height=36,
-                style=ft.ButtonStyle(
-                    bgcolor={"": "#454a4a"},
-                    color={"": _TEXT},
-                    shape={"": ft.RoundedRectangleBorder(radius=6)},
-                ),
-                on_click=on_browse,
-            )
-        )
-    return ft.Row(controls, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-
-
-def _checkbox(label: str, value: bool = True) -> ft.Checkbox:
-    return ft.Checkbox(
-        label=label,
-        value=value,
-        label_style=ft.TextStyle(size=12, color=_LABEL),
-        fill_color={"selected": _ACCENT_GREEN, "": "#454a4a"},
-    )
-
-
-def _dropdown(options: list[str], value: str) -> ft.Dropdown:
-    return ft.Dropdown(
-        options=[ft.dropdown.Option(o) for o in options],
-        value=value,
-        height=36,
-        text_size=12,
-        content_padding=ft.Padding(left=10, top=4, right=10, bottom=4),
-        expand=True,
-    )
-
-
-def _field(hint: str = "", value: str = "") -> ft.TextField:
-    return ft.TextField(
-        hint_text=hint,
-        value=value,
-        height=36,
-        text_size=12,
-        content_padding=ft.Padding(left=10, top=4, right=10, bottom=4),
-        border_color=_BORDER,
-        focused_border_color=_ACCENT_BLUE,
-        cursor_color=_LABEL,
-        expand=True,
-    )
-
-
-def _scan_button(ref: ft.Ref, on_click, height: int = 30) -> ft.FilledButton:
-    return ft.FilledButton(
-        "🔍  Scan",
-        ref=ref,
-        height=height,
-        style=ft.ButtonStyle(
-            bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
-            color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
-            overlay_color={ft.ControlState.HOVERED: "#00000000"},
-            padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
-            shape={"": ft.RoundedRectangleBorder(radius=6)},
-            text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-        ),
-        on_click=on_click,
-    )
-
-
-def _run_button(ref: ft.Ref, on_click, height: int = 30) -> ft.FilledButton:
-    return ft.FilledButton(
-        "▶  Run",
-        ref=ref,
-        height=height,
-        style=ft.ButtonStyle(
-            bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
-            color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
-            overlay_color={ft.ControlState.HOVERED: "#00000000"},
-            padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
-            shape={"": ft.RoundedRectangleBorder(radius=6)},
-            text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-        ),
-        on_click=on_click,
-    )
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -257,180 +139,26 @@ async def main(page: ft.Page) -> None:
     _cancel_event = threading.Event()
     _update_lock = threading.Lock()  # serialise all page.update() calls across threads
 
-    # Card row style constants
-    _CARD_BG = "#1c2030"
-    _CARD_BORDER = "#2a3148"
-
-    def _card_step_row(
-        cb: ft.Checkbox,
-        run_ref: ft.Ref,
-        scan_ref: ft.Ref,
-        step_n: int,
-        step_label: str,
-    ) -> ft.Container:
-        """Elevated pill card: [checkbox  label──────────  🔍 Scan  ▶ Run]"""
-        scan_btn = _scan_button(scan_ref, lambda _e, n=step_n: _run_scan_alone(n))
-        run_btn = _run_button(run_ref, lambda _e, n=step_n: _run_step_alone(n))
-        cb.label = ""  # label lives as a Text control for layout control
-        return ft.Container(
-            content=ft.Row(
-                [
-                    cb,
-                    ft.Text(
-                        step_label,
-                        size=12,
-                        color=_LABEL,
-                        expand=True,
-                    ),
-                    scan_btn,
-                    run_btn,
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=6,
-            ),
-            bgcolor=_CARD_BG,
-            border=ft.Border(
-                left=ft.BorderSide(1, _CARD_BORDER),
-                top=ft.BorderSide(1, _CARD_BORDER),
-                right=ft.BorderSide(1, _CARD_BORDER),
-                bottom=ft.BorderSide(1, _CARD_BORDER),
-            ),
-            border_radius=8,
-            padding=ft.Padding(left=8, top=4, right=8, bottom=4),
-        )
-
-    def _scan_run_buttons(scan_ref: ft.Ref, run_ref: ft.Ref, step_n: int) -> ft.Row:
-        """Compact [🔍 Scan  ▶ Run] pair for a section header_action slot."""
-        scan_btn = _scan_button(scan_ref, lambda _e, n=step_n: _run_scan_alone(n), height=28)
-        run_btn = _run_button(run_ref, lambda _e, n=step_n: _run_step_alone(n), height=28)
-        return ft.Row([scan_btn, run_btn], spacing=6)
-
-    def _card_flag_row(
-        *checkboxes: ft.Checkbox,
-    ) -> ft.Container:
-        """Compact flat pill for flag checkboxes (no run button)."""
-        return ft.Container(
-            content=ft.Row(
-                list(checkboxes),
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=20,
-            ),
-            bgcolor=_CARD_BG,
-            border=ft.Border(
-                left=ft.BorderSide(1, _CARD_BORDER),
-                top=ft.BorderSide(1, _CARD_BORDER),
-                right=ft.BorderSide(1, _CARD_BORDER),
-                bottom=ft.BorderSide(1, _CARD_BORDER),
-            ),
-            border_radius=8,
-            padding=ft.Padding(left=8, top=4, right=8, bottom=4),
-        )
-
-    def _card_backup_row(cb: ft.Checkbox, ref: ft.Ref) -> ft.Container:
-        """Backup row: checkbox + ▶ Run Backup pinned right."""
-        run_btn = _run_button(ref, lambda _e: _run_backup_alone())
-        cb.label = ""
-        return ft.Container(
-            content=ft.Row(
-                [
-                    cb,
-                    ft.Text("Backup", size=12, color=_LABEL, expand=True),
-                    run_btn,
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=6,
-            ),
-            bgcolor=_CARD_BG,
-            border=ft.Border(
-                left=ft.BorderSide(1, _CARD_BORDER),
-                top=ft.BorderSide(1, _CARD_BORDER),
-                right=ft.BorderSide(1, _CARD_BORDER),
-                bottom=ft.BorderSide(1, _CARD_BORDER),
-            ),
-            border_radius=8,
-            padding=ft.Padding(left=8, top=4, right=8, bottom=4),
-        )
-
-    def _card_sort_row(cb: ft.Checkbox, ref: ft.Ref) -> ft.Container:
-        """Reset Crates A→Z row: checkbox + ▶ Run pinned right."""
-        run_btn = _run_button(ref, lambda _e: _run_sort_alone())
-        cb.label = ""
-        return ft.Container(
-            content=ft.Row(
-                [
-                    cb,
-                    ft.Text("Reset Crates A→Z", size=12, color=_LABEL, expand=True),
-                    run_btn,
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=6,
-            ),
-            bgcolor=_CARD_BG,
-            border=ft.Border(
-                left=ft.BorderSide(1, _CARD_BORDER),
-                top=ft.BorderSide(1, _CARD_BORDER),
-                right=ft.BorderSide(1, _CARD_BORDER),
-                bottom=ft.BorderSide(1, _CARD_BORDER),
-            ),
-            border_radius=8,
-            padding=ft.Padding(left=8, top=4, right=8, bottom=4),
-        )
-
-    def _card_session_fixer_row(
-        cb: ft.Checkbox,
-        scan_ref: ft.Ref,
-        run_ref: ft.Ref,
-    ) -> ft.Container:
-        """Session Fixer pill: [checkbox  label──────────  🔍 Scan  ▶ Run]"""
-        scan_btn = _scan_button(scan_ref, lambda _e: _run_session_scan())
-        run_btn = _run_button(run_ref, lambda _e: _run_session_fix())
-        cb.label = ""
-        return ft.Container(
-            content=ft.Column(
-                [
-                    ft.Row(
-                        [
-                            cb,
-                            ft.Text(
-                                "Fix broken session paths",
-                                size=12,
-                                color=_LABEL,
-                                expand=True,
-                            ),
-                            scan_btn,
-                            run_btn,
-                        ],
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=6,
-                    ),
-                    ft.Text(
-                        "Scans ~/Music/_Serato_/History/Sessions/*.session — fixes broken paths using your Music Folder",
-                        size=11,
-                        color=_TEXT,
-                        italic=True,
-                    ),
-                ],
-                spacing=4,
-            ),
-            bgcolor=_CARD_BG,
-            border=ft.Border(
-                left=ft.BorderSide(1, _CARD_BORDER),
-                top=ft.BorderSide(1, _CARD_BORDER),
-                right=ft.BorderSide(1, _CARD_BORDER),
-                bottom=ft.BorderSide(1, _CARD_BORDER),
-            ),
-            border_radius=8,
-            padding=ft.Padding(left=8, top=4, right=8, bottom=4),
-        )
-
     pipeline_grid = ft.Column(
         [
-            _card_backup_row(cb_backup, _run_backup_ref),
-            _card_step_row(cb_step1, _run1_ref, _scan1_ref, 1, "Fix Database Paths"),
-            _card_step_row(cb_step2, _run2_ref, _scan2_ref, 2, "Fix Crate Paths"),
-            _card_step_row(cb_step3, _run3_ref, _scan3_ref, 3, "Append Existing Crates"),
-            _card_step_row(cb_step4, _run4_ref, _scan4_ref, 4, "Create New Crates"),
-            _card_sort_row(cb_sort, _run_sort_ref),
+            _card_action_row(cb_backup, _run_backup_ref, "Backup", lambda _e: _run_backup_alone()),
+            _card_step_row(
+                cb_step1, _run1_ref, _scan1_ref, "Fix Database Paths",
+                on_scan=lambda _e: _run_scan_alone(1), on_run=lambda _e: _run_step_alone(1),
+            ),
+            _card_step_row(
+                cb_step2, _run2_ref, _scan2_ref, "Fix Crate Paths",
+                on_scan=lambda _e: _run_scan_alone(2), on_run=lambda _e: _run_step_alone(2),
+            ),
+            _card_step_row(
+                cb_step3, _run3_ref, _scan3_ref, "Append Existing Crates",
+                on_scan=lambda _e: _run_scan_alone(3), on_run=lambda _e: _run_step_alone(3),
+            ),
+            _card_step_row(
+                cb_step4, _run4_ref, _scan4_ref, "Create New Crates",
+                on_scan=lambda _e: _run_scan_alone(4), on_run=lambda _e: _run_step_alone(4),
+            ),
+            _card_action_row(cb_sort, _run_sort_ref, "Reset Crates A→Z", lambda _e: _run_sort_alone()),
         ],
         spacing=5,
     )
@@ -459,32 +187,26 @@ async def main(page: ft.Page) -> None:
             spacing=6,
         ),
         bgcolor=_CARD_BG,
-        border=ft.Border(
-            left=ft.BorderSide(1, _CARD_BORDER),
-            top=ft.BorderSide(1, _CARD_BORDER),
-            right=ft.BorderSide(1, _CARD_BORDER),
-            bottom=ft.BorderSide(1, _CARD_BORDER),
-        ),
+        border=ft.Border.all(1, _CARD_BORDER),
         border_radius=8,
         padding=ft.Padding(left=8, top=4, right=8, bottom=4),
     )
 
-    # ── Load config if available; seed defaults if not ────────────────────────
-    _cfg_path = Path(__file__).parent / "config.yaml"
-    _load_config(
-        music_field, serato_field, parent_field,
-        cb_backup, cb_sort,
-        cb_step1, cb_step2, cb_step3, cb_step4,
-        cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
+    # ── Bundle controls for _build_config / _load_config ───────────────────────
+    _controls = _ConfigControls(
+        music_field=music_field, serato_field=serato_field, parent_field=parent_field,
+        cb_backup=cb_backup, cb_sort=cb_sort,
+        cb_step1=cb_step1, cb_step2=cb_step2, cb_step3=cb_step3, cb_step4=cb_step4,
+        cb_dupe_scan=cb_dupe_scan, dd_detection=dd_detection, dd_move=dd_move,
+        cb_dry_run=cb_dry_run,
     )
+
+    # ── Load config if available; seed defaults if not ────────────────────────
+    _cfg_path = Path(__file__).parent.parent / "config.yaml"
+    _load_config(_controls)
     if not _cfg_path.exists():
         try:
-            _build_config(
-                music_field, serato_field, parent_field,
-                cb_backup, cb_sort,
-                cb_step1, cb_step2, cb_step3, cb_step4,
-                cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
-            ).save(_cfg_path)
+            _build_config(_controls).save(_cfg_path)
         except Exception:
             pass  # Non-fatal — user can still fill paths and click Start
 
@@ -593,12 +315,18 @@ async def main(page: ft.Page) -> None:
                                                 _section(
                                                     "Dupe Manager", dupe_content,
                                                     accent_color=_ACCENT_AMBER,
-                                                    header_action=_scan_run_buttons(_scan0_ref, _run0_ref, 0),
+                                                    header_action=_scan_run_buttons(
+                                                        _scan0_ref, _run0_ref,
+                                                        on_scan=lambda _e: _run_scan_alone(0),
+                                                        on_run=lambda _e: _run_step_alone(0),
+                                                    ),
                                                 ),
                                                 _section(
                                                     "History Session Fixer",
                                                     _card_session_fixer_row(
                                                         cb_session_fix, _sf_scan_ref, _sf_run_ref,
+                                                        on_scan=lambda _e: _run_session_scan(),
+                                                        on_run=lambda _e: _run_session_fix(),
                                                     ),
                                                     accent_color=_ACCENT_AMBER,
                                                 ),
@@ -894,26 +622,23 @@ async def main(page: ft.Page) -> None:
 
     _STEP_LABELS = {0: "Dupe Manager", 1: "Step 1", 2: "Step 2", 3: "Step 3", 4: "Step 4"}
 
-    def _run_step_alone(step_n: int) -> None:
-        """Run a single pipeline step in isolation on a daemon thread."""
+    def _run_pipeline_step(step_n: int, *, scan: bool) -> None:
+        """Run, or scan (forced dry-run), a single pipeline step in isolation."""
         if not _guard_required(
             (music_field.value, "Music Folder is required."),
             (serato_field.value, "Serato Path is required."),
         ):
             return
         try:
-            cfg = _build_config(
-                music_field, serato_field, parent_field,
-                cb_backup, cb_sort,
-                cb_step1, cb_step2, cb_step3, cb_step4,
-                cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
-            )
+            cfg = _build_config(_controls)
         except Exception as exc:
             _append_log(f"⚠️ Config error: {exc}")
             return
 
+        if scan:
+            cfg = dataclasses.replace(cfg, dry_run=True)
+
         step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
-        label = "Dry run" if cfg.dry_run else "Running"
         _cancel_event.clear()
 
         def _work():
@@ -927,53 +652,29 @@ async def main(page: ft.Page) -> None:
             }
             fn_map[step_n]()
 
-        _run_worker(
-            f"{label} {step_label}…",
-            work=_work,
-            on_success=lambda _result: (f"✅ {step_label} complete", "Done"),
-            error_label=step_label,
-        )
+        if scan:
+            _run_worker(
+                f"Scanning {step_label}…",
+                work=_work,
+                on_success=lambda _result: ("🔍 Scan complete — no files written", "Scan complete"),
+                error_label=f"Scan {step_label}",
+            )
+        else:
+            label = "Dry run" if cfg.dry_run else "Running"
+            _run_worker(
+                f"{label} {step_label}…",
+                work=_work,
+                on_success=lambda _result: (f"✅ {step_label} complete", "Done"),
+                error_label=step_label,
+            )
+
+    def _run_step_alone(step_n: int) -> None:
+        """Run a single pipeline step in isolation on a daemon thread."""
+        _run_pipeline_step(step_n, scan=False)
 
     def _run_scan_alone(step_n: int) -> None:
         """Scan a single pipeline step (forced dry-run) on a daemon thread."""
-        if not _guard_required(
-            (music_field.value, "Music Folder is required."),
-            (serato_field.value, "Serato Path is required."),
-        ):
-            return
-        try:
-            cfg = _build_config(
-                music_field, serato_field, parent_field,
-                cb_backup, cb_sort,
-                cb_step1, cb_step2, cb_step3, cb_step4,
-                cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
-            )
-        except Exception as exc:
-            _append_log(f"⚠️ Config error: {exc}")
-            return
-
-        # Force dry_run regardless of the checkbox state
-        scan_cfg = dataclasses.replace(cfg, dry_run=True)
-        step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
-        _cancel_event.clear()
-
-        def _work():
-            from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
-            fn_map = {
-                0: lambda: run_step0(scan_cfg, log_callback=_append_log),
-                1: lambda: run_step1(scan_cfg, log_callback=_append_log, cancel_event=_cancel_event),
-                2: lambda: run_step2(scan_cfg, log_callback=_append_log),
-                3: lambda: run_step3(scan_cfg, log_callback=_append_log),
-                4: lambda: run_step4(scan_cfg, log_callback=_append_log),
-            }
-            fn_map[step_n]()
-
-        _run_worker(
-            f"Scanning {step_label}…",
-            work=_work,
-            on_success=lambda _result: ("🔍 Scan complete — no files written", "Scan complete"),
-            error_label=f"Scan {step_label}",
-        )
+        _run_pipeline_step(step_n, scan=True)
 
     def _run_session_scan() -> None:
         """Scan for broken session paths (dry_run=True) on a daemon thread.
@@ -1048,12 +749,7 @@ async def main(page: ft.Page) -> None:
 
         # Build config (no save — use 💾 Save for that)
         try:
-            cfg = _build_config(
-                music_field, serato_field, parent_field,
-                cb_backup, cb_sort,
-                cb_step1, cb_step2, cb_step3, cb_step4,
-                cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
-            )
+            cfg = _build_config(_controls)
         except Exception as exc:
             _append_log(f"⚠️ Config error: {exc}")
             return
@@ -1074,12 +770,7 @@ async def main(page: ft.Page) -> None:
 
     def _on_save(_e) -> None:
         try:
-            _build_config(
-                music_field, serato_field, parent_field,
-                cb_backup, cb_sort,
-                cb_step1, cb_step2, cb_step3, cb_step4,
-                cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
-            ).save(_cfg_path)
+            _build_config(_controls).save(_cfg_path)
             _status_ref.current.value = "Settings saved."
             with _update_lock:
                 page.update()
@@ -1101,63 +792,6 @@ async def main(page: ft.Page) -> None:
         with _update_lock:
             _log_ref.current.controls.clear()
             page.update()
-
-
-def _build_config(
-    music_field, serato_field, parent_field,
-    cb_backup, cb_sort,
-    cb_step1, cb_step2, cb_step3, cb_step4,
-    cb_dupe_scan, dd_detection, dd_move, cb_dry_run=None,
-):
-    """Construct a SyncConfig from current GUI control values."""
-    from config import SyncConfig
-    return SyncConfig(
-        music_library_path=(music_field.value or "").strip(),
-        serato_library_path=(serato_field.value or "").strip(),
-        parent_crate_path=(parent_field.value or "").strip() or None,
-        backup_enabled=bool(cb_backup.value),
-        clear_library_before_sync=False,
-        crate_sorting_enabled=bool(cb_sort.value),
-        step1_enabled=bool(cb_step1.value),
-        step2_enabled=bool(cb_step2.value),
-        step3_enabled=bool(cb_step3.value),
-        step4_enabled=bool(cb_step4.value),
-        dupe_scan_enabled=bool(cb_dupe_scan.value),
-        dupe_detection_mode=dd_detection.value or "off",
-        dupe_move_mode=dd_move.value or "false",
-        dry_run=bool(cb_dry_run.value) if cb_dry_run is not None else False,
-    )
-
-
-def _load_config(
-    music_field, serato_field, parent_field,
-    cb_backup, cb_sort,
-    cb_step1, cb_step2, cb_step3, cb_step4,
-    cb_dupe_scan, dd_detection, dd_move, cb_dry_run=None,
-) -> None:
-    """Populate controls from config.yaml if it exists. Silent on missing/invalid."""
-    try:
-        from config import SyncConfig
-        cfg_path = Path(__file__).parent / "config.yaml"
-        if not cfg_path.exists():
-            return
-        cfg = SyncConfig.load(cfg_path)
-        music_field.value = cfg.music_library_path or ""
-        serato_field.value = cfg.serato_library_path or ""
-        parent_field.value = cfg.parent_crate_path or ""
-        cb_backup.value = cfg.backup_enabled
-        cb_sort.value = cfg.crate_sorting_enabled
-        cb_step1.value = cfg.step1_enabled
-        cb_step2.value = cfg.step2_enabled
-        cb_step3.value = cfg.step3_enabled
-        cb_step4.value = cfg.step4_enabled
-        cb_dupe_scan.value = cfg.dupe_scan_enabled
-        dd_detection.value = cfg.dupe_detection_mode
-        dd_move.value = cfg.dupe_move_mode
-        if cb_dry_run is not None:
-            cb_dry_run.value = getattr(cfg, "dry_run", False)
-    except Exception:
-        pass  # Missing or malformed config — start with defaults
 
 
 def launch() -> None:

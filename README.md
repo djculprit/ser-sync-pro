@@ -84,7 +84,7 @@ pytest tests/test_path_utils.py::test_name   # Single test
 cdd-sync-pro/
 ├── python/                             # PRIMARY — Flet GUI + headless CLI (Python 3.12+)
 │   ├── main.py                         # Entry point — GUI (default) or --cli [--dry-run]
-│   ├── gui.py                          # Flet dark-mode front end
+│   ├── gui/                            # Flet dark-mode front end (__init__.py: app; theme.py: colors + widgets)
 │   ├── config.py                       # SyncConfig — YAML load/save
 │   ├── core/                           # Stateless parsing/formatting (binary I/O, path utils, TLV parser)
 │   ├── sync/                           # Pipeline: backup, scan, dedupe, crate/database fixers, pref sorter, session fixer
