@@ -851,17 +851,17 @@ async def main(page: ft.Page) -> None:
                 if not pending:
                     continue
                 def _do(items: list[tuple[str, str]] = pending) -> None:
-                    for _msg, _color in items:
-                        _log_ref.current.controls.append(
-                            ft.Text(
-                                _msg,
-                                size=12,
-                                color=_color,
-                                font_family="Courier New",
-                                selectable=True,
-                            )
-                        )
                     with _update_lock:
+                        for _msg, _color in items:
+                            _log_ref.current.controls.append(
+                                ft.Text(
+                                    _msg,
+                                    size=12,
+                                    color=_color,
+                                    font_family="Courier New",
+                                    selectable=True,
+                                )
+                            )
                         page.update()
                 page.run_thread(_do)
         threading.Thread(target=_flush_loop, daemon=True).start()
@@ -872,27 +872,27 @@ async def main(page: ft.Page) -> None:
 
     def _set_controls_enabled(enabled: bool) -> None:
         """Enable/disable all config controls atomically."""
-        for ctrl in [
-            music_field, serato_field, parent_field,
-            cb_backup, cb_step1, cb_step2, cb_step3, cb_step4, cb_sort,
-            cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
-        ]:
-            ctrl.disabled = not enabled
-        _start_ref.current.disabled = not enabled
-        _save_ref.current.disabled = not enabled
-        _cancel_ref.current.disabled = enabled
-        if _progress_ref.current:
-            # Always visible: indeterminate while running, empty bar when idle
-            _progress_ref.current.value = None if not enabled else 0
-        for run_ref in (
-            _run_backup_ref, _run_sort_ref,
-            _run0_ref, _run1_ref, _run2_ref, _run3_ref, _run4_ref,
-            _scan0_ref, _scan1_ref, _scan2_ref, _scan3_ref, _scan4_ref,
-            _sf_scan_ref, _sf_run_ref,
-        ):
-            if run_ref.current:
-                run_ref.current.disabled = not enabled
         with _update_lock:
+            for ctrl in [
+                music_field, serato_field, parent_field,
+                cb_backup, cb_step1, cb_step2, cb_step3, cb_step4, cb_sort,
+                cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
+            ]:
+                ctrl.disabled = not enabled
+            _start_ref.current.disabled = not enabled
+            _save_ref.current.disabled = not enabled
+            _cancel_ref.current.disabled = enabled
+            if _progress_ref.current:
+                # Always visible: indeterminate while running, empty bar when idle
+                _progress_ref.current.value = None if not enabled else 0
+            for run_ref in (
+                _run_backup_ref, _run_sort_ref,
+                _run0_ref, _run1_ref, _run2_ref, _run3_ref, _run4_ref,
+                _scan0_ref, _scan1_ref, _scan2_ref, _scan3_ref, _scan4_ref,
+                _sf_scan_ref, _sf_run_ref,
+            ):
+                if run_ref.current:
+                    run_ref.current.disabled = not enabled
             page.update()
 
     def _run_backup_alone() -> None:
@@ -901,7 +901,8 @@ async def main(page: ft.Page) -> None:
             _append_log(f"⚠️ Serato Path is required.")
             return
         serato_path = serato_field.value.strip()
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         _status_ref.current.value = "Running backup…"
         _set_controls_enabled(False)
 
@@ -932,7 +933,8 @@ async def main(page: ft.Page) -> None:
             _append_log(f"⚠️ Serato Path is required.")
             return
         serato_path = serato_field.value.strip()
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         _status_ref.current.value = "Sorting crates…"
         _set_controls_enabled(False)
 
@@ -976,7 +978,8 @@ async def main(page: ft.Page) -> None:
             return
 
         step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         label = "Dry run" if cfg.dry_run else "Running"
         _status_ref.current.value = f"{label} {step_label}…"
         _cancel_event.clear()
@@ -1030,7 +1033,8 @@ async def main(page: ft.Page) -> None:
         scan_cfg = dataclasses.replace(cfg, dry_run=True)
         step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
 
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         _status_ref.current.value = f"Scanning {step_label}…"
         _cancel_event.clear()
         _set_controls_enabled(False)
@@ -1071,7 +1075,8 @@ async def main(page: ft.Page) -> None:
             return
         local_serato_path = str(Path.home() / "Music" / "_Serato_")
         music_path = music_field.value.strip()
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         _append_log(f"🔍 Session path: {local_serato_path}")
         _status_ref.current.value = "Scanning session paths…"
         _set_controls_enabled(False)
@@ -1110,7 +1115,8 @@ async def main(page: ft.Page) -> None:
 
         local_serato_path = str(Path.home() / "Music" / "_Serato_")
         music_path = music_field.value.strip()
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         _append_log(f"🔍 Session path: {local_serato_path}")
         _status_ref.current.value = "Fixing session paths…"
         _set_controls_enabled(False)
@@ -1157,7 +1163,8 @@ async def main(page: ft.Page) -> None:
             return
 
         # Clear log + set UI state
-        _log_ref.current.controls.clear()
+        with _update_lock:
+            _log_ref.current.controls.clear()
         _status_ref.current.value = "Dry run running…" if cfg.dry_run else "Running…"
         _set_controls_enabled(False)
 
@@ -1190,7 +1197,8 @@ async def main(page: ft.Page) -> None:
                 cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
             ).save(_cfg_path)
             _status_ref.current.value = "Settings saved."
-            page.update()
+            with _update_lock:
+                page.update()
         except Exception as exc:
             _append_log(f"⚠️ Save failed: {exc}")
     def _on_cancel(_e) -> None:
@@ -1206,8 +1214,8 @@ async def main(page: ft.Page) -> None:
                 _log_queue.get_nowait()
         except queue.Empty:
             pass
-        _log_ref.current.controls.clear()
         with _update_lock:
+            _log_ref.current.controls.clear()
             page.update()
 
 
