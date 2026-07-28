@@ -80,8 +80,10 @@ Entry point `main.py` launches the Flet GUI by default, or runs headless via `--
   7. `session_fixer.py` — separate flow (not part of `run_sync`): repairs broken paths in
      Serato `.session` history files; ported from the Java `session-fixer` tool.
 
-`gui.py` is a Flet dark-mode front end over the same `sync.*` modules — treat it as a thin
-wrapper, not where sync logic should live.
+`gui/` is a Flet dark-mode front end over the same `sync.*` modules — `__init__.py` holds the
+app shell and handlers, `theme.py` holds stateless colors/widget builders, `config_io.py` holds
+the config bundle/build/load bridge. Treat the package as a thin wrapper, not where sync logic
+should live.
 
 ### Path format requirements (must-know when touching path logic)
 
