@@ -143,6 +143,40 @@ def _field(hint: str = "", value: str = "") -> ft.TextField:
     )
 
 
+def _scan_button(ref: ft.Ref, on_click, height: int = 30) -> ft.FilledButton:
+    return ft.FilledButton(
+        "🔍  Scan",
+        ref=ref,
+        height=height,
+        style=ft.ButtonStyle(
+            bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
+            color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
+            overlay_color={ft.ControlState.HOVERED: "#00000000"},
+            padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
+            shape={"": ft.RoundedRectangleBorder(radius=6)},
+            text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
+        ),
+        on_click=on_click,
+    )
+
+
+def _run_button(ref: ft.Ref, on_click, height: int = 30) -> ft.FilledButton:
+    return ft.FilledButton(
+        "▶  Run",
+        ref=ref,
+        height=height,
+        style=ft.ButtonStyle(
+            bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
+            color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
+            overlay_color={ft.ControlState.HOVERED: "#00000000"},
+            padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
+            shape={"": ft.RoundedRectangleBorder(radius=6)},
+            text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
+        ),
+        on_click=on_click,
+    )
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 async def main(page: ft.Page) -> None:
@@ -235,34 +269,8 @@ async def main(page: ft.Page) -> None:
         step_label: str,
     ) -> ft.Container:
         """Elevated pill card: [checkbox  label──────────  🔍 Scan  ▶ Run]"""
-        scan_btn = ft.FilledButton(
-            "🔍  Scan",
-            ref=scan_ref,
-            height=30,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
-                color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e, n=step_n: _run_scan_alone(n),
-        )
-        run_btn = ft.FilledButton(
-            "▶  Run",
-            ref=run_ref,
-            height=30,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
-                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e, n=step_n: _run_step_alone(n),
-        )
+        scan_btn = _scan_button(scan_ref, lambda _e, n=step_n: _run_scan_alone(n))
+        run_btn = _run_button(run_ref, lambda _e, n=step_n: _run_step_alone(n))
         cb.label = ""  # label lives as a Text control for layout control
         return ft.Container(
             content=ft.Row(
@@ -293,34 +301,8 @@ async def main(page: ft.Page) -> None:
 
     def _scan_run_buttons(scan_ref: ft.Ref, run_ref: ft.Ref, step_n: int) -> ft.Row:
         """Compact [🔍 Scan  ▶ Run] pair for a section header_action slot."""
-        scan_btn = ft.FilledButton(
-            "🔍  Scan",
-            ref=scan_ref,
-            height=28,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
-                color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e, n=step_n: _run_scan_alone(n),
-        )
-        run_btn = ft.FilledButton(
-            "▶  Run",
-            ref=run_ref,
-            height=28,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
-                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e, n=step_n: _run_step_alone(n),
-        )
+        scan_btn = _scan_button(scan_ref, lambda _e, n=step_n: _run_scan_alone(n), height=28)
+        run_btn = _run_button(run_ref, lambda _e, n=step_n: _run_step_alone(n), height=28)
         return ft.Row([scan_btn, run_btn], spacing=6)
 
     def _card_flag_row(
@@ -346,20 +328,7 @@ async def main(page: ft.Page) -> None:
 
     def _card_backup_row(cb: ft.Checkbox, ref: ft.Ref) -> ft.Container:
         """Backup row: checkbox + ▶ Run Backup pinned right."""
-        run_btn = ft.FilledButton(
-            "▶  Run",
-            ref=ref,
-            height=30,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
-                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e: _run_backup_alone(),
-        )
+        run_btn = _run_button(ref, lambda _e: _run_backup_alone())
         cb.label = ""
         return ft.Container(
             content=ft.Row(
@@ -384,20 +353,7 @@ async def main(page: ft.Page) -> None:
 
     def _card_sort_row(cb: ft.Checkbox, ref: ft.Ref) -> ft.Container:
         """Reset Crates A→Z row: checkbox + ▶ Run pinned right."""
-        run_btn = ft.FilledButton(
-            "▶  Run",
-            ref=ref,
-            height=30,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
-                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e: _run_sort_alone(),
-        )
+        run_btn = _run_button(ref, lambda _e: _run_sort_alone())
         cb.label = ""
         return ft.Container(
             content=ft.Row(
@@ -426,34 +382,8 @@ async def main(page: ft.Page) -> None:
         run_ref: ft.Ref,
     ) -> ft.Container:
         """Session Fixer pill: [checkbox  label──────────  🔍 Scan  ▶ Run]"""
-        scan_btn = ft.FilledButton(
-            "🔍  Scan",
-            ref=scan_ref,
-            height=30,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
-                color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e: _run_session_scan(),
-        )
-        run_btn = ft.FilledButton(
-            "▶  Run",
-            ref=run_ref,
-            height=30,
-            style=ft.ButtonStyle(
-                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
-                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
-                overlay_color={ft.ControlState.HOVERED: "#00000000"},
-                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
-                shape={"": ft.RoundedRectangleBorder(radius=6)},
-                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
-            ),
-            on_click=lambda _e: _run_session_fix(),
-        )
+        scan_btn = _scan_button(scan_ref, lambda _e: _run_session_scan())
+        run_btn = _run_button(run_ref, lambda _e: _run_session_fix())
         cb.label = ""
         return ft.Container(
             content=ft.Column(
@@ -895,76 +825,81 @@ async def main(page: ft.Page) -> None:
                     run_ref.current.disabled = not enabled
             page.update()
 
-    def _run_backup_alone() -> None:
-        """Run backup in isolation on a daemon thread."""
-        if not serato_field.value or not serato_field.value.strip():
-            _append_log(f"⚠️ Serato Path is required.")
-            return
-        serato_path = serato_field.value.strip()
+    def _guard_required(*checks: tuple[str | None, str]) -> bool:
+        """Log a warning and return False if any (value, message) pair is blank."""
+        for value, message in checks:
+            if not value or not value.strip():
+                _append_log(f"⚠️ {message}")
+                return False
+        return True
+
+    def _run_worker(status_msg: str, work, on_success, error_label: str) -> None:
+        """Run `work()` on a daemon thread with the standard clear-log /
+        disable-controls / re-enable-controls-on-both-paths lifecycle.
+
+        `work` takes no args and returns a result (or raises).
+        `on_success(result)` must return an (log_message, status_message) pair.
+        """
         with _update_lock:
             _log_ref.current.controls.clear()
-        _status_ref.current.value = "Running backup…"
+        _status_ref.current.value = status_msg
         _set_controls_enabled(False)
 
-        def _worker():
+        def _thread():
             try:
-                from sync.backup import create_backup
-                result = create_backup(serato_path)
+                result = work()
                 def _done():
-                    if result:
-                        _append_log(f"✅ Backup complete: {result}")
-                    else:
-                        _append_log("❌ Backup failed — check logs.")
-                    _status_ref.current.value = "Done"
+                    msg, status = on_success(result)
+                    _append_log(msg)
+                    _status_ref.current.value = status
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
                 def _err(_exc=exc):
-                    _append_log(f"❌ Backup error: {_exc}")
+                    _append_log(f"❌ {error_label} failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        threading.Thread(target=_thread, daemon=True).start()
+
+    def _run_backup_alone() -> None:
+        """Run backup in isolation on a daemon thread."""
+        if not _guard_required((serato_field.value, "Serato Path is required.")):
+            return
+        serato_path = serato_field.value.strip()
+        from sync.backup import create_backup
+        _run_worker(
+            "Running backup…",
+            work=lambda: create_backup(serato_path),
+            on_success=lambda result: (
+                (f"✅ Backup complete: {result}", "Done") if result
+                else ("❌ Backup failed — check logs.", "Error")
+            ),
+            error_label="Backup",
+        )
 
     def _run_sort_alone() -> None:
         """Run sort_crates (Reset A→Z) in isolation on a daemon thread."""
-        if not serato_field.value or not serato_field.value.strip():
-            _append_log(f"⚠️ Serato Path is required.")
+        if not _guard_required((serato_field.value, "Serato Path is required.")):
             return
         serato_path = serato_field.value.strip()
-        with _update_lock:
-            _log_ref.current.controls.clear()
-        _status_ref.current.value = "Sorting crates…"
-        _set_controls_enabled(False)
-
-        def _worker():
-            try:
-                from sync.pref_sorter import sort_crates
-                sort_crates(serato_path)
-                def _done():
-                    _append_log("✅ Crates sorted A→Z")
-                    _status_ref.current.value = "Done"
-                    _set_controls_enabled(True)
-                page.run_thread(_done)
-            except Exception as exc:
-                def _err(_exc=exc):
-                    _append_log(f"❌ Sort failed: {_exc}")
-                    _status_ref.current.value = "Error"
-                    _set_controls_enabled(True)
-                page.run_thread(_err)
-
-        threading.Thread(target=_worker, daemon=True).start()
+        from sync.pref_sorter import sort_crates
+        _run_worker(
+            "Sorting crates…",
+            work=lambda: sort_crates(serato_path),
+            on_success=lambda _result: ("✅ Crates sorted A→Z", "Done"),
+            error_label="Sort",
+        )
 
     _STEP_LABELS = {0: "Dupe Manager", 1: "Step 1", 2: "Step 2", 3: "Step 3", 4: "Step 4"}
 
     def _run_step_alone(step_n: int) -> None:
         """Run a single pipeline step in isolation on a daemon thread."""
-        if not music_field.value or not music_field.value.strip():
-            _append_log(f"⚠️ Music Folder is required.")
-            return
-        if not serato_field.value or not serato_field.value.strip():
-            _append_log(f"⚠️ Serato Path is required.")
+        if not _guard_required(
+            (music_field.value, "Music Folder is required."),
+            (serato_field.value, "Serato Path is required."),
+        ):
             return
         try:
             cfg = _build_config(
@@ -978,45 +913,33 @@ async def main(page: ft.Page) -> None:
             return
 
         step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
-        with _update_lock:
-            _log_ref.current.controls.clear()
         label = "Dry run" if cfg.dry_run else "Running"
-        _status_ref.current.value = f"{label} {step_label}…"
         _cancel_event.clear()
-        _set_controls_enabled(False)
 
-        def _worker():
-            try:
-                from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
-                fn_map = {
-                    0: lambda: run_step0(cfg, log_callback=_append_log),
-                    1: lambda: run_step1(cfg, log_callback=_append_log, cancel_event=_cancel_event),
-                    2: lambda: run_step2(cfg, log_callback=_append_log),
-                    3: lambda: run_step3(cfg, log_callback=_append_log),
-                    4: lambda: run_step4(cfg, log_callback=_append_log),
-                }
-                fn_map[step_n]()
-                def _done():
-                    _append_log(f"✅ {step_label} complete")
-                    _status_ref.current.value = "Done"
-                    _set_controls_enabled(True)
-                page.run_thread(_done)
-            except Exception as exc:
-                def _err(_exc=exc):
-                    _append_log(f"❌ {step_label} failed: {_exc}")
-                    _status_ref.current.value = "Error"
-                    _set_controls_enabled(True)
-                page.run_thread(_err)
+        def _work():
+            from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
+            fn_map = {
+                0: lambda: run_step0(cfg, log_callback=_append_log),
+                1: lambda: run_step1(cfg, log_callback=_append_log, cancel_event=_cancel_event),
+                2: lambda: run_step2(cfg, log_callback=_append_log),
+                3: lambda: run_step3(cfg, log_callback=_append_log),
+                4: lambda: run_step4(cfg, log_callback=_append_log),
+            }
+            fn_map[step_n]()
 
-        threading.Thread(target=_worker, daemon=True).start()
+        _run_worker(
+            f"{label} {step_label}…",
+            work=_work,
+            on_success=lambda _result: (f"✅ {step_label} complete", "Done"),
+            error_label=step_label,
+        )
 
     def _run_scan_alone(step_n: int) -> None:
         """Scan a single pipeline step (forced dry-run) on a daemon thread."""
-        if not music_field.value or not music_field.value.strip():
-            _append_log(f"⚠️ Music Folder is required.")
-            return
-        if not serato_field.value or not serato_field.value.strip():
-            _append_log(f"⚠️ Serato Path is required.")
+        if not _guard_required(
+            (music_field.value, "Music Folder is required."),
+            (serato_field.value, "Serato Path is required."),
+        ):
             return
         try:
             cfg = _build_config(
@@ -1032,37 +955,25 @@ async def main(page: ft.Page) -> None:
         # Force dry_run regardless of the checkbox state
         scan_cfg = dataclasses.replace(cfg, dry_run=True)
         step_label = _STEP_LABELS.get(step_n, f"Step {step_n}")
-
-        with _update_lock:
-            _log_ref.current.controls.clear()
-        _status_ref.current.value = f"Scanning {step_label}…"
         _cancel_event.clear()
-        _set_controls_enabled(False)
 
-        def _worker():
-            try:
-                from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
-                fn_map = {
-                    0: lambda: run_step0(scan_cfg, log_callback=_append_log),
-                    1: lambda: run_step1(scan_cfg, log_callback=_append_log, cancel_event=_cancel_event),
-                    2: lambda: run_step2(scan_cfg, log_callback=_append_log),
-                    3: lambda: run_step3(scan_cfg, log_callback=_append_log),
-                    4: lambda: run_step4(scan_cfg, log_callback=_append_log),
-                }
-                fn_map[step_n]()
-                def _done():
-                    _append_log(f"🔍 Scan complete — no files written")
-                    _status_ref.current.value = "Scan complete"
-                    _set_controls_enabled(True)
-                page.run_thread(_done)
-            except Exception as exc:
-                def _err(_exc=exc):
-                    _append_log(f"❌ Scan {step_label} failed: {_exc}")
-                    _status_ref.current.value = "Error"
-                    _set_controls_enabled(True)
-                page.run_thread(_err)
+        def _work():
+            from sync.pipeline import run_step0, run_step1, run_step2, run_step3, run_step4
+            fn_map = {
+                0: lambda: run_step0(scan_cfg, log_callback=_append_log),
+                1: lambda: run_step1(scan_cfg, log_callback=_append_log, cancel_event=_cancel_event),
+                2: lambda: run_step2(scan_cfg, log_callback=_append_log),
+                3: lambda: run_step3(scan_cfg, log_callback=_append_log),
+                4: lambda: run_step4(scan_cfg, log_callback=_append_log),
+            }
+            fn_map[step_n]()
 
-        threading.Thread(target=_worker, daemon=True).start()
+        _run_worker(
+            f"Scanning {step_label}…",
+            work=_work,
+            on_success=lambda _result: ("🔍 Scan complete — no files written", "Scan complete"),
+            error_label=f"Scan {step_label}",
+        )
 
     def _run_session_scan() -> None:
         """Scan for broken session paths (dry_run=True) on a daemon thread.
@@ -1070,38 +981,29 @@ async def main(page: ft.Page) -> None:
         Session files always live in ~/Music/_Serato_/History/Sessions/ —
         independent of the external drive Serato path configured above.
         """
-        if not music_field.value or not music_field.value.strip():
-            _append_log(f"⚠️ Music Folder is required.")
+        if not _guard_required((music_field.value, "Music Folder is required.")):
             return
         local_serato_path = str(Path.home() / "Music" / "_Serato_")
         music_path = music_field.value.strip()
-        with _update_lock:
-            _log_ref.current.controls.clear()
         _append_log(f"🔍 Session path: {local_serato_path}")
-        _status_ref.current.value = "Scanning session paths…"
-        _set_controls_enabled(False)
 
-        def _worker():
-            try:
-                from sync.session_fixer import scan_broken_paths
-                result = scan_broken_paths(
-                    local_serato_path, [music_path], dry_run=True, log_callback=_append_log
-                )
-                fixable = len(result["fixable"])
-                unfixable = len(result["unfixable"])
-                def _done():
-                    _append_log(f"🔍 Scan complete — {fixable} fixable, {unfixable} unfixable")
-                    _status_ref.current.value = "Scan complete"
-                    _set_controls_enabled(True)
-                page.run_thread(_done)
-            except Exception as exc:
-                def _err(_exc=exc):
-                    _append_log(f"❌ Session scan failed: {_exc}")
-                    _status_ref.current.value = "Error"
-                    _set_controls_enabled(True)
-                page.run_thread(_err)
+        def _work():
+            from sync.session_fixer import scan_broken_paths
+            return scan_broken_paths(
+                local_serato_path, [music_path], dry_run=True, log_callback=_append_log
+            )
 
-        threading.Thread(target=_worker, daemon=True).start()
+        def _on_success(result):
+            fixable = len(result["fixable"])
+            unfixable = len(result["unfixable"])
+            return f"🔍 Scan complete — {fixable} fixable, {unfixable} unfixable", "Scan complete"
+
+        _run_worker(
+            "Scanning session paths…",
+            work=_work,
+            on_success=_on_success,
+            error_label="Session scan",
+        )
 
     def _run_session_fix() -> None:
         """Fix broken session paths on a daemon thread.
@@ -1109,45 +1011,39 @@ async def main(page: ft.Page) -> None:
         Session files always live in ~/Music/_Serato_/History/Sessions/ —
         independent of the external drive Serato path configured above.
         """
-        if not music_field.value or not music_field.value.strip():
-            _append_log(f"⚠️ Music Folder is required.")
+        if not _guard_required((music_field.value, "Music Folder is required.")):
             return
 
         local_serato_path = str(Path.home() / "Music" / "_Serato_")
         music_path = music_field.value.strip()
-        with _update_lock:
-            _log_ref.current.controls.clear()
         _append_log(f"🔍 Session path: {local_serato_path}")
-        _status_ref.current.value = "Fixing session paths…"
-        _set_controls_enabled(False)
 
-        def _worker():
-            try:
-                from sync.session_fixer import fix_broken_paths
-                sessions_fixed, entries_fixed = fix_broken_paths(
-                    local_serato_path, [music_path], dry_run=False, log_callback=_append_log
-                )
-                def _done():
-                    _append_log(f"✅ Session fix complete — {entries_fixed} entries across {sessions_fixed} file(s)")
-                    _status_ref.current.value = "Done"
-                    _set_controls_enabled(True)
-                page.run_thread(_done)
-            except Exception as exc:
-                def _err(_exc=exc):
-                    _append_log(f"❌ Session fix failed: {_exc}")
-                    _status_ref.current.value = "Error"
-                    _set_controls_enabled(True)
-                page.run_thread(_err)
+        def _work():
+            from sync.session_fixer import fix_broken_paths
+            return fix_broken_paths(
+                local_serato_path, [music_path], dry_run=False, log_callback=_append_log
+            )
 
-        threading.Thread(target=_worker, daemon=True).start()
+        def _on_success(result):
+            sessions_fixed, entries_fixed = result
+            return (
+                f"✅ Session fix complete — {entries_fixed} entries across {sessions_fixed} file(s)",
+                "Done",
+            )
+
+        _run_worker(
+            "Fixing session paths…",
+            work=_work,
+            on_success=_on_success,
+            error_label="Session fix",
+        )
 
     def _on_start(_e) -> None:
         # Validate required fields
-        if not music_field.value or not music_field.value.strip():
-            _append_log(f"⚠️ Music Folder is required.")
-            return
-        if not serato_field.value or not serato_field.value.strip():
-            _append_log(f"⚠️ Serato Path is required.")
+        if not _guard_required(
+            (music_field.value, "Music Folder is required."),
+            (serato_field.value, "Serato Path is required."),
+        ):
             return
 
         # Build config (no save — use 💾 Save for that)
@@ -1162,31 +1058,19 @@ async def main(page: ft.Page) -> None:
             _append_log(f"⚠️ Config error: {exc}")
             return
 
-        # Clear log + set UI state
-        with _update_lock:
-            _log_ref.current.controls.clear()
-        _status_ref.current.value = "Dry run running…" if cfg.dry_run else "Running…"
-        _set_controls_enabled(False)
-
+        status_msg = "Dry run running…" if cfg.dry_run else "Running…"
         _cancel_event.clear()
 
-        def _worker():
-            try:
-                from sync.pipeline import run_sync
-                run_sync(cfg, log_callback=_append_log, cancel_event=_cancel_event)
-                def _done():
-                    _append_log("✅ Sync Complete")
-                    _status_ref.current.value = "Done"
-                    _set_controls_enabled(True)
-                page.run_thread(_done)
-            except Exception as exc:
-                def _err(_exc=exc):
-                    _append_log(f"❌ Sync failed: {_exc}")
-                    _status_ref.current.value = "Error"
-                    _set_controls_enabled(True)
-                page.run_thread(_err)
+        def _work():
+            from sync.pipeline import run_sync
+            run_sync(cfg, log_callback=_append_log, cancel_event=_cancel_event)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        _run_worker(
+            status_msg,
+            work=_work,
+            on_success=lambda _result: ("✅ Sync Complete", "Done"),
+            error_label="Sync",
+        )
 
     def _on_save(_e) -> None:
         try:

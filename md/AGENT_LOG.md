@@ -2,6 +2,14 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-07-27 — GUI Duplication Cleanup (gui-cleanup)
+
+- **Task**: `python/gui.py` had grown two duplication problems: seven async handlers (`_run_backup_alone`, `_run_sort_alone`, `_run_step_alone`, `_run_scan_alone`, `_run_session_scan`, `_run_session_fix`, `_on_start`) each repeated the same ~40-line validate/clear-log/disable-controls/spawn-thread/re-enable skeleton, and five widget-factory functions each rebuilt an identical scan-button/run-button `ButtonStyle`. Deduplicate both without changing any button's behavior.
+- **Files Changed**:
+  - `python/gui.py` [MODIFIED] — Added `_guard_required()` and `_run_worker()` helpers encapsulating the handler lifecycle; rewrote all seven handlers to call them, keeping each handler's own config-building, step dispatch tables, and session-path logging intact. Added `_scan_button()`/`_run_button()` factories (with a `height` param to preserve `_scan_run_buttons`'s existing `height=28` vs. the usual `30`); replaced all five call sites' inline button construction with factory calls. Net: 1284 → 1168 lines.
+- **What Was Done**: Followed `md/actions/gui-cleanup/PLAN.md` phases 1–2. A pre-existing uncommitted `_update_lock` thread-safety fix (wrapping `page.update()` calls) was already committed (`a17c9694`) before this work started, and was preserved through the refactor — every `_run_worker`/`_set_controls_enabled` call still wraps its `page.update()` in `_update_lock`. One deliberate text change carried over from the plan's own example: the backup handler's error log line changed from `"❌ Backup error: …"` to `"❌ Backup failed: …"` to fit the shared `error_label` pattern. Verified: `pytest` 21/21 passing after each phase, GUI boots cleanly (no import/runtime errors), and the user visually confirmed every card row (Backup, Steps 1–4, Reset A→Z, Dupe Manager, Session Fixer) renders pixel-identical to before, with Scan/Run buttons intact. Phase 3 (splitting `gui.py` into multiple modules) was explicitly out of scope for this pass.
+- **Docs to Update**: None — done here
+
 ## 2026-07-25 — Per-Session File Logging (Volume-Relative)
 
 - **Task**: The Python app had no persistent logging — `main.py --cli` only configured a console handler, and the GUI never touched `logging` at all, so pipeline `logger.info()` calls went nowhere under the GUI. Add per-session log files, matching the location convention of the original Java tool.
